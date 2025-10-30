@@ -32,7 +32,7 @@ public class Jugador {
 
     private boolean colisionReciente = false;
     private float tiempoColisionReset = 0f;
-    private final float TIEMPO_RESET_COLISION = 0.5f; // tiempo mínimo entre sonidos
+    private final float TIEMPO_RESET_COLISION = 0.5f;
 
     private boolean estaEnMenu = false;
     private EstacionTrabajo estacionActual = null;
@@ -57,7 +57,14 @@ public class Jugador {
         this.posicion = new Vector2(x, y);
         this.velocidad = new Vector2(0, 0);
         this.gestorAnimacion = gestorAnimacion;
-        this.animacion = gestorAnimacion.getAnimacionPorObjeto(objetoEnMano);
+
+        // Inicialización segura de animación
+        if (gestorAnimacion != null) {
+            this.animacion = gestorAnimacion.getAnimacionPorObjeto(objetoEnMano);
+        } else {
+            this.animacion = null; // Headless / servidor
+        }
+
         this.estadoTiempo = 0;
         float ALTO_HITBOX = 120;
         this.HITBOX = new Rectangle(x + OFFSET_HITBOX_X, y + OFFSET_HITBOX_Y, ANCHO_HITBOX, ALTO_HITBOX);
@@ -65,7 +72,7 @@ public class Jugador {
 
     public void actualizar(float delta) {
         if (velocidad.isZero(0.01f) && !estaDeslizando) {
-            frameActual = animacion.getKeyFrame(0, true);
+            if (animacion != null) frameActual = animacion.getKeyFrame(0, true);
             return;
         }
 
@@ -74,11 +81,11 @@ public class Jugador {
         } else {
             estadoTiempo = 0;
         }
-        frameActual = animacion.getKeyFrame(estadoTiempo, true);
+
+        if (animacion != null) frameActual = animacion.getKeyFrame(estadoTiempo, true);
 
         if (estaDeslizando) {
             tiempoDeslizamiento += delta;
-
             float DURACION_DESLIZAMIENTO = 0.3f;
             float progreso = tiempoDeslizamiento / DURACION_DESLIZAMIENTO;
             float factorReduccion = Math.max(0f, 1f - progreso);
@@ -133,20 +140,18 @@ public class Jugador {
                 tiempoColisionReset = 0f;
             }
         }
-
     }
 
     public void dibujar(SpriteBatch batch) {
-        TextureRegion frame = frameActual;
-
-        float x = posicion.x;
-        float y = posicion.y;
-        float width = 128;
-        float height = 128;
-        float originX = width / 2f;
-        float originY = height / 2f;
-
-        batch.draw(frame, x, y, originX, originY, width, height, 1f, 1f, anguloRotacion);
+        if (animacion != null && frameActual != null) {
+            float x = posicion.x;
+            float y = posicion.y;
+            float width = 128;
+            float height = 128;
+            float originX = width / 2f;
+            float originY = height / 2f;
+            batch.draw(frameActual, x, y, originX, originY, width, height, 1f, 1f, anguloRotacion);
+        }
     }
 
     public Vector2 getPosicion() {
@@ -154,12 +159,9 @@ public class Jugador {
     }
 
     public void manejarEntrada(DatosEntrada datosEntrada) {
-        if (estaDeslizando) {
-            return;
-        }
+        if (estaDeslizando) return;
 
         float dx = 0, dy = 0;
-
         if (datosEntrada.arriba) dy += DISTANCIA_MOVIMIENTO;
         if (datosEntrada.abajo) dy -= DISTANCIA_MOVIMIENTO;
         if (datosEntrada.izquierda) dx -= DISTANCIA_MOVIMIENTO;
@@ -181,22 +183,17 @@ public class Jugador {
     }
 
     private void reproducirSonidoColision() {
-        // Distorsión: pitch aleatorio entre 0.8 y 1.2
         float pitch = 0.8f + (float)Math.random() * 0.4f;
         GestorAudio.getInstance().reproducirSonido(SonidoJuego.COLISION_JUGADORES);
     }
 
     private boolean colisiona(Rectangle rect) {
-
         for (Rectangle obstaculo : colisionables) {
-            if (obstaculo.overlaps(rect)) {
-                return true;
-            }
+            if (obstaculo.overlaps(rect)) return true;
         }
 
         for (Jugador otro : otrosJugadores) {
             if (otro != this && otro.getHITBOX().overlaps(rect)) {
-                // Solo reproducir sonido si no se ha reproducido recientemente
                 if (!colisionReciente) {
                     reproducirSonidoColision();
                     colisionReciente = true;
@@ -216,7 +213,8 @@ public class Jugador {
             dx *= 2f;
             dy *= 2f;
         }
-        float deltaTime = Gdx.graphics.getDeltaTime();
+
+        float deltaTime = (Gdx.app != null) ? Gdx.graphics.getDeltaTime() : 1/60f;
         float desplazamientoX = dx * deltaTime;
         float desplazamientoY = dy * deltaTime;
 
@@ -230,30 +228,11 @@ public class Jugador {
             return;
         }
 
-        boolean puedeMoverX = false;
-        boolean puedeMoverY = false;
+        boolean puedeMoverX = dx != 0 && !colisiona(new Rectangle(HITBOX.x + desplazamientoX, HITBOX.y, HITBOX.width, HITBOX.height));
+        boolean puedeMoverY = dy != 0 && !colisiona(new Rectangle(HITBOX.x, HITBOX.y + desplazamientoY, HITBOX.width, HITBOX.height));
 
-        if (dx != 0) {
-            Rectangle areaFuturaX = new Rectangle(HITBOX.x + desplazamientoX, HITBOX.y, HITBOX.width, HITBOX.height);
-            puedeMoverX = !colisiona(areaFuturaX);
-        }
-
-        if (dy != 0) {
-            Rectangle areaFuturaY = new Rectangle(HITBOX.x, HITBOX.y + desplazamientoY, HITBOX.width, HITBOX.height);
-            puedeMoverY = !colisiona(areaFuturaY);
-        }
-
-        if (puedeMoverX) {
-            velocidad.x = dx;
-        } else {
-            velocidad.x = 0;
-        }
-
-        if (puedeMoverY) {
-            velocidad.y = dy;
-        } else {
-            velocidad.y = 0;
-        }
+        velocidad.x = puedeMoverX ? dx : 0;
+        velocidad.y = puedeMoverY ? dy : 0;
     }
 
     private boolean colisionMovimiento(float dx, float dy) {
@@ -269,10 +248,7 @@ public class Jugador {
         for (int i = 0; i < pasos; i++) {
             px += pasoX;
             py += pasoY;
-            Rectangle area = new Rectangle(px, py, HITBOX.width, HITBOX.height);
-            if (colisiona(area)) {
-                return true;
-            }
+            if (colisiona(new Rectangle(px, py, HITBOX.width, HITBOX.height))) return true;
         }
         return false;
     }
@@ -281,7 +257,6 @@ public class Jugador {
         if (velocidad.len() > 0 && !estaDeslizando) {
             estaDeslizando = true;
             tiempoDeslizamiento = 0f;
-
             float FACTOR_DESLIZAMIENTO = 1.5f;
             VELOCIDAD_DESLIZAMIENTO.set(velocidad).scl(FACTOR_DESLIZAMIENTO);
         }
@@ -299,12 +274,11 @@ public class Jugador {
     }
 
     public void sacarDeInventario() {
-        ObjetoAlmacenable item = this.inventario;
         this.inventario = null;
         setObjetoEnMano("vacio");
     }
 
-    public void descartarInventario(){
+    public void descartarInventario() {
         this.inventario = null;
         setObjetoEnMano("vacio");
     }
@@ -336,37 +310,26 @@ public class Jugador {
     }
 
     public String getNombreItemInventario() {
-        if (inventario != null) {
-            return this.inventario.getNombre();
-        }
-        return "Vacío";
+        return (inventario != null) ? inventario.getNombre() : "Vacío";
     }
 
     public void setOtrosJugadores(List<Jugador> otrosJugadores) { this.otrosJugadores = otrosJugadores; }
-
-    public void setColisionables(List<Rectangle> colisionables) {
-        this.colisionables = colisionables;
-    }
-
-    public void setAnguloRotacion(float angulo) {
-        this.anguloRotacion = angulo;
-    }
+    public void setColisionables(List<Rectangle> colisionables) { this.colisionables = colisionables; }
+    public void setAnguloRotacion(float angulo) { this.anguloRotacion = angulo; }
 
     public void setObjetoEnMano(String nombreObjeto) {
         if (!nombreObjeto.equalsIgnoreCase(this.objetoEnMano)) {
             this.objetoEnMano = nombreObjeto;
-            this.animacion = gestorAnimacion.getAnimacionPorObjeto(nombreObjeto);
+            if (gestorAnimacion != null) {
+                this.animacion = gestorAnimacion.getAnimacionPorObjeto(nombreObjeto);
+            } else {
+                this.animacion = null; // Headless
+            }
             this.estadoTiempo = 0;
         }
     }
 
     public Rectangle getHITBOX() { return this.HITBOX; }
-
-    public void setInteractuables(ArrayList<Rectangle> rectangulosInteractuables) {
-        this.interactuables = rectangulosInteractuables;
-    }
-
-    public float getAnguloRotacion() {
-        return this.anguloRotacion;
-    }
+    public void setInteractuables(ArrayList<Rectangle> rectangulosInteractuables) { this.interactuables = rectangulosInteractuables; }
+    public float getAnguloRotacion() { return this.anguloRotacion; }
 }

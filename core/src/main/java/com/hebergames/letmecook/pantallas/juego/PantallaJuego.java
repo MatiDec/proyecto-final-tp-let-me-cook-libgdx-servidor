@@ -96,7 +96,7 @@ public class PantallaJuego extends Pantalla {
                 rutasMapas.add(Recursos.RUTA_MAPAS + "Sucursal_" + i + ".tmx");
             }
 
-            gestorPartida.generarNuevaPartida(rutasMapas, rutasMapas.size());
+            gestorPartida.generarNuevaPartida(rutasMapas, rutasMapas.size(), true);
         }
 
         nivelActual = gestorPartida.getNivelActual();

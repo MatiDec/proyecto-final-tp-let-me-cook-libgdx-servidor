@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 // === DATOS ESTACIÓN PROCESADORA ===
 public class DatosEstacionProcesadora implements Serializable {
+    private static final long serialVersionUID = 1L;
     public int index;
     public boolean procesando;
     public String nombreIngrediente;

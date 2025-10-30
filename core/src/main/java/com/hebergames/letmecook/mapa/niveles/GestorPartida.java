@@ -25,7 +25,7 @@ public class GestorPartida {
         return instancia;
     }
 
-    public void generarNuevaPartida(ArrayList<String> rutasMapas, int cantidadNiveles) {
+    public void generarNuevaPartida(ArrayList<String> rutasMapas, int cantidadNiveles, boolean esServidor) {
         NIVELES_PARTIDA.clear();
         nivelActual = 0;
         puntajeTotalPartida = 0;
@@ -39,10 +39,10 @@ public class GestorPartida {
             String rutaMapaElegida = rutasDisponibles.remove(indexMapa);
 
             TurnoTrabajo turnoAleatorio = TurnoTrabajo.values()[random.nextInt(TurnoTrabajo.values().length)];
-
             CancionNivel cancionNivel = cancionesDisponibles[i % cancionesDisponibles.length];
 
-            Mapa mapaGenerado = new Mapa(rutaMapaElegida, "Sucursal " + (i + 1));
+            // 👇 Nuevo: se pasa el flag esServidor
+            Mapa mapaGenerado = new Mapa(rutaMapaElegida, "Sucursal " + (i + 1), true);
             NIVELES_PARTIDA.add(new NivelPartida(mapaGenerado, turnoAleatorio, cancionNivel));
         }
     }

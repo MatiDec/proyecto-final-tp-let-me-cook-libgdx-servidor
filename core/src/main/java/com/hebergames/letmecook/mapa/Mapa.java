@@ -16,7 +16,10 @@ import com.hebergames.letmecook.estaciones.interaccionclientes.MesaRetiro;
 import com.hebergames.letmecook.estaciones.procesadoras.Freidora;
 import com.hebergames.letmecook.estaciones.procesadoras.Horno;
 import com.hebergames.letmecook.estaciones.procesadoras.Tostadora;
+import com.hebergames.letmecook.servidor.HeadlessTmxMapLoader;
+import com.hebergames.letmecook.red.ServerFileHandleResolver;
 
+import java.io.File;
 import java.util.ArrayList;
 
 public class Mapa {
@@ -25,11 +28,32 @@ public class Mapa {
     private final OrthogonalTiledMapRenderer RENDERER;
     private final String NOMBRE_SUCURSAL;
 
-    public Mapa(String ruta, String NOMBRE_SUCURSAL) {
-        TmxMapLoader loader = new TmxMapLoader();
-        this.MAPA = loader.load(ruta);
-        this.RENDERER = new OrthogonalTiledMapRenderer(MAPA);
-        this.NOMBRE_SUCURSAL = NOMBRE_SUCURSAL;
+    public Mapa(String ruta, String nombreSucursal, boolean esServidor) {
+        this.NOMBRE_SUCURSAL = nombreSucursal;
+
+        if (esServidor) {
+            File archivoMapa = new File(ruta);
+            if (!archivoMapa.exists()) {
+                throw new RuntimeException("No se encontró el mapa: " + archivoMapa.getAbsolutePath());
+            }
+
+            try {
+                // ✅ Usa HeadlessTmxMapLoader que NO carga texturas
+                HeadlessTmxMapLoader loader = new HeadlessTmxMapLoader(new ServerFileHandleResolver());
+                this.MAPA = loader.load(archivoMapa.getAbsolutePath());
+
+                System.out.println("✅ Mapa cargado en servidor (sin texturas): " + nombreSucursal);
+            } catch (Exception e) {
+                throw new RuntimeException("Error cargando el mapa desde el servidor: " + ruta, e);
+            }
+
+            this.RENDERER = null; // sin renderer en el servidor
+        } else {
+            // 🧭 En cliente, usa el flujo normal de LibGDX
+            TmxMapLoader loader = new TmxMapLoader();
+            this.MAPA = loader.load(ruta);
+            this.RENDERER = new OrthogonalTiledMapRenderer(MAPA);
+        }
     }
 
     private ArrayList<Rectangle> obtenerRectangulosDeCapa(String nombreCapa) {
@@ -85,13 +109,19 @@ public class Mapa {
     }
 
     public void render(OrthographicCamera camara) {
-        RENDERER.setView(camara);
-        RENDERER.render();
+        if (RENDERER != null) {
+            RENDERER.setView(camara);
+            RENDERER.render();
+        }
     }
 
     public void dispose() {
-        MAPA.dispose();
-        RENDERER.dispose();
+        if (MAPA != null) {
+            MAPA.dispose();
+        }
+        if (RENDERER != null) {
+            RENDERER.dispose();
+        }
     }
 
     public TiledMap getMapa() {
@@ -104,7 +134,6 @@ public class Mapa {
 
         for (MapObject objeto : objetos) {
             String tipo = objeto.getName();
-
 
             Rectangle rect;
 
@@ -161,6 +190,7 @@ public class Mapa {
         return estaciones;
     }
 
-    public String getNombre() { return this.NOMBRE_SUCURSAL; }
-
+    public String getNombre() {
+        return this.NOMBRE_SUCURSAL;
+    }
 }

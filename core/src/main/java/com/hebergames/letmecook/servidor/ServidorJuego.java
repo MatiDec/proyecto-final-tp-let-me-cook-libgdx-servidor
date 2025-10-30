@@ -137,13 +137,11 @@ public class ServidorJuego {
     }
 
     private void enviarEstadoJuego() {
-        if (logicaJuego == null) {
-            return;
-        }
+        if (logicaJuego == null) return;
 
-        if (jugadoresConectados.size() < MAX_JUGADORES) {
-            return;
-        }
+        // Solo actualizar si hay 2 jugadores conectados y los jugadores están listos
+        if (jugadoresConectados.size() < MAX_JUGADORES) return;
+        if (!logicaJuego.estanJugadoresListos()) return;
 
         try {
             logicaJuego.actualizar(1f / TICK_RATE);
@@ -158,6 +156,7 @@ public class ServidorJuego {
             e.printStackTrace();
         }
     }
+
 
     private void enviarPaquete(PaqueteRed paquete, InetAddress direccion, int puerto) {
         try {

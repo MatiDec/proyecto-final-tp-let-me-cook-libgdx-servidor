@@ -9,6 +9,10 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.hebergames.letmecook.pantallas.juego.ObjetoVisualizable;
 import com.hebergames.letmecook.utiles.Render;
 
+/**
+ * Clase Texto adaptable a cliente y servidor.
+ * En servidor (Gdx no inicializado) no carga fuentes, solo mantiene lógica de texto y posición.
+ */
 public class Texto implements ObjetoVisualizable {
 
     private final BitmapFont FUENTE;
@@ -16,47 +20,79 @@ public class Texto implements ObjetoVisualizable {
     private String texto = "";
     private final GlyphLayout LAYOUT;
 
+    /**
+     * Constructor de Texto.
+     *
+     * @param RUTA_FUENTE Ruta del archivo de fuente (solo se usa si Gdx está inicializado)
+     * @param DIMENSION Tamaño de la fuente
+     * @param COLOR Color de la fuente
+     * @param SOMBRA Si debe tener sombra
+     */
     public Texto(final String RUTA_FUENTE, final int DIMENSION, final Color COLOR, final boolean SOMBRA) {
+        if (Gdx.app != null) {
+            // Cliente: se inicializa la fuente
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(RUTA_FUENTE));
+            FreeTypeFontGenerator.FreeTypeFontParameter parametro = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(RUTA_FUENTE));
-        FreeTypeFontGenerator.FreeTypeFontParameter parametro = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            parametro.size = DIMENSION;
+            parametro.color = COLOR;
+            if (SOMBRA) {
+                parametro.shadowColor = Color.BLACK;
+                parametro.shadowOffsetX = 1;
+                parametro.shadowOffsetY = 1;
+            }
 
-        parametro.size = DIMENSION;
-        parametro.color = COLOR;
-        if(SOMBRA) {
-            parametro.shadowColor = Color.BLACK;
-            parametro.shadowOffsetX = 1;
-            parametro.shadowOffsetY = 1;
+            FUENTE = generator.generateFont(parametro);
+            generator.dispose();
+        } else {
+            // Servidor: no se carga la fuente, solo dummy para evitar NPE
+            FUENTE = null;
         }
 
-        FUENTE = generator.generateFont(parametro);
-        generator.dispose();
         LAYOUT = new GlyphLayout();
     }
-    public boolean fueClickeado(float x, float y){
+
+    /**
+     * Verifica si se hizo clic en el texto
+     */
+    public boolean fueClickeado(float x, float y) {
         float ancho = getAncho();
         float alto = getAlto();
         float yInferior = this.y - alto;
 
-        return x >= this.x && x<=this.x + ancho && y >= yInferior && y <= this.y;
-    };
+        return x >= this.x && x <= this.x + ancho && y >= yInferior && y <= this.y;
+    }
 
+    /**
+     * Dibuja el texto usando Render.batch (solo si FUENTE existe)
+     */
     public void dibujar() {
-        FUENTE.draw(Render.batch, this.texto, this.x, this.y);
-    }
-
-    @Override
-    public void dibujarEnUi(SpriteBatch batch) {
-        FUENTE.draw(batch, this.texto, this.x, this.y);
-    }
-
-    public void setTexto(String nuevoTexto) {
-        if (!this.texto.equals(nuevoTexto)) {
-            this.texto = nuevoTexto;
-            this.LAYOUT.setText(FUENTE, nuevoTexto);
+        if (FUENTE != null) {
+            FUENTE.draw(Render.batch, this.texto, this.x, this.y);
         }
     }
 
+    /**
+     * Dibuja el texto en un batch específico (UI)
+     */
+    @Override
+    public void dibujarEnUi(SpriteBatch batch) {
+        if (FUENTE != null) {
+            FUENTE.draw(batch, this.texto, this.x, this.y);
+        }
+    }
+
+    /**
+     * Cambia el texto mostrado
+     */
+    public void setTexto(String nuevoTexto) {
+        if (!this.texto.equals(nuevoTexto)) {
+            this.texto = nuevoTexto;
+            if (FUENTE != null) {
+                LAYOUT.setText(FUENTE, nuevoTexto);
+            }
+        }
+    }
 
     public void setPosition(float x, float y) {
         this.x = x;
@@ -64,11 +100,11 @@ public class Texto implements ObjetoVisualizable {
     }
 
     public float getAncho() {
-        return this.LAYOUT.width;
+        return LAYOUT.width;
     }
 
     public float getAlto() {
-        return this.LAYOUT.height;
+        return LAYOUT.height;
     }
 
     public float getX() {

@@ -42,8 +42,8 @@ public class LogicaServidor {
         // Inicializar mapa y partida
         GestorPartida gestorPartida = GestorPartida.getInstancia();
         ArrayList<String> rutasMapas = new ArrayList<>();
-        rutasMapas.add("ruta/mapa1.tmx");
-        gestorPartida.generarNuevaPartida(rutasMapas, 1);
+        rutasMapas.add("core/src/main/java/com/hebergames/letmecook/recursos/mapas/Sucursal_1.tmx");
+        gestorPartida.generarNuevaPartida(rutasMapas, 1, true);
 
         NivelPartida nivel = gestorPartida.getNivelActual();
         gestorMapa = new GestorMapa();
@@ -209,4 +209,9 @@ public class LogicaServidor {
             razonFin != null ? razonFin : ""
         );
     }
+
+    public boolean estanJugadoresListos() {
+        return jugador1 != null && jugador2 != null;
+    }
+
 }
