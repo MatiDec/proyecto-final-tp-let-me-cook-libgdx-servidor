@@ -81,4 +81,16 @@ public abstract class Ingrediente implements ObjetoAlmacenable {
     }
 
     public TextureRegion getTextura() { return this.textura; }
+
+    public float getTiempoMaximo() {
+        return tiempoCoccionMaximo;
+    }
+
+    public float getTiempoMinimo() {
+        return tiempoCoccionMinimo;
+    }
+
+    public MetodoCoccion getMetodoCoccion() {
+        return metodoCoccion;
+    }
 }

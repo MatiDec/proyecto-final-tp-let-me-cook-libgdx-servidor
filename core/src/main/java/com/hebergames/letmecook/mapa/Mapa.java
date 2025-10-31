@@ -32,28 +32,12 @@ public class Mapa {
         this.NOMBRE_SUCURSAL = nombreSucursal;
 
         if (esServidor) {
-            File archivoMapa = new File(ruta);
-            if (!archivoMapa.exists()) {
-                throw new RuntimeException("No se encontró el mapa: " + archivoMapa.getAbsolutePath());
-            }
-
-            try {
-                // ✅ Usa HeadlessTmxMapLoader que NO carga texturas
-                HeadlessTmxMapLoader loader = new HeadlessTmxMapLoader(new ServerFileHandleResolver());
-                this.MAPA = loader.load(archivoMapa.getAbsolutePath());
-
-                System.out.println("✅ Mapa cargado en servidor (sin texturas): " + nombreSucursal);
-            } catch (Exception e) {
-                throw new RuntimeException("Error cargando el mapa desde el servidor: " + ruta, e);
-            }
-
-            this.RENDERER = null; // sin renderer en el servidor
-        } else {
-            // 🧭 En cliente, usa el flujo normal de LibGDX
-            TmxMapLoader loader = new TmxMapLoader();
-            this.MAPA = loader.load(ruta);
-            this.RENDERER = new OrthogonalTiledMapRenderer(MAPA);
+            throw new RuntimeException("ERROR: No usar Mapa en servidor. Usar MapaServidor en su lugar.");
         }
+
+        TmxMapLoader loader = new TmxMapLoader();
+        this.MAPA = loader.load(ruta);
+        this.RENDERER = new OrthogonalTiledMapRenderer(MAPA);
     }
 
     private ArrayList<Rectangle> obtenerRectangulosDeCapa(String nombreCapa) {

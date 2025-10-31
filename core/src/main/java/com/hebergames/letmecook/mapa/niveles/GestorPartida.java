@@ -1,6 +1,7 @@
 package com.hebergames.letmecook.mapa.niveles;
 
 import com.hebergames.letmecook.mapa.Mapa;
+import com.hebergames.letmecook.servidor.MapaServidor;
 import com.hebergames.letmecook.sonido.CancionNivel;
 
 import java.util.ArrayList;
@@ -41,9 +42,13 @@ public class GestorPartida {
             TurnoTrabajo turnoAleatorio = TurnoTrabajo.values()[random.nextInt(TurnoTrabajo.values().length)];
             CancionNivel cancionNivel = cancionesDisponibles[i % cancionesDisponibles.length];
 
-            // 👇 Nuevo: se pasa el flag esServidor
-            Mapa mapaGenerado = new Mapa(rutaMapaElegida, "Sucursal " + (i + 1), true);
-            NIVELES_PARTIDA.add(new NivelPartida(mapaGenerado, turnoAleatorio, cancionNivel));
+            Object mapa;
+            if (esServidor) {
+                mapa = new MapaServidor(rutaMapaElegida, "Sucursal " + (i + 1));
+            } else {
+                mapa = new Mapa(rutaMapaElegida, "Sucursal " + (i + 1), false);
+            }
+            NIVELES_PARTIDA.add(new NivelPartida(mapa, turnoAleatorio, cancionNivel, true));
         }
     }
 

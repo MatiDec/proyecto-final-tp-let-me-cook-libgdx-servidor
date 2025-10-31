@@ -74,6 +74,14 @@ public class ServidorJuego {
             case DESCONEXION:
                 manejarDesconexion(direccion, puerto);
                 break;
+
+            case INTERACCION:  // 👈 NUEVO
+                PaqueteInteraccion interaccion = (PaqueteInteraccion) paquete;
+                if (logicaJuego != null) {
+                    logicaJuego.procesarInteraccion(interaccion);
+                }
+                actualizarPing(direccion, puerto);
+                break;
         }
     }
 
