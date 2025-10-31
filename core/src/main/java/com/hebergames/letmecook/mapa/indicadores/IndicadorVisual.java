@@ -81,7 +81,7 @@ public class IndicadorVisual {
     }
 
     public void dibujar(SpriteBatch batch) {
-        if (!visible || texturaActual == null) return;
+        if (batch == null || !visible || texturaActual == null) return; // Servidor
 
         float TAMANO = 32f;
         float x = POSICION_PANTALLA.x - TAMANO / 2f;

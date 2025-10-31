@@ -19,6 +19,7 @@ public abstract class EstacionConMenu extends EstacionTrabajo {
     protected abstract void dibujarMenu(SpriteBatch batch, Jugador jugador);
 
     public void dibujar(SpriteBatch batch, Jugador jugador) {
+        if (batch == null) return; // Servidor
         if (jugadorOcupante == jugador && jugador.estaEnMenu()) {
             dibujarMenu(batch, jugador);
         }

@@ -31,7 +31,6 @@ public class HiloReceptorPaquetes implements Runnable {
                 final InetAddress direccion = paqueteRecibido.getAddress();
                 final int puerto = paqueteRecibido.getPort();
 
-                // Usar postRunnable para procesar en el hilo de LibGDX
                 Gdx.app.postRunnable(() -> {
                     servidor.procesarPaquete(paquete, direccion, puerto);
                 });

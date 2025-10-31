@@ -208,7 +208,7 @@ public class GestorTexturas {
 
     public TextureRegion getTexturaCliente() {
         if (!texturasListas) {
-            System.err.println("ADVERTENCIA: Texturas no cargadas aún");
+            System.err.println("(TexturaCliente)ADVERTENCIA: Texturas no cargadas aún");
             return null;
         }
 
@@ -217,7 +217,7 @@ public class GestorTexturas {
 
     public TextureRegion getTexturaProducto(String nombreProducto) {
         if (!texturasListas) {
-            System.err.println("ADVERTENCIA: Texturas no cargadas aún");
+            System.err.println("(TexturaProducto)ADVERTENCIA: Texturas no cargadas aún");
             return null;
         }
 
@@ -230,7 +230,7 @@ public class GestorTexturas {
 
     public TextureRegion getTexturaPisoMojado() {
         if (!texturasListas) {
-            System.err.println("ADVERTENCIA: Texturas no cargadas aún");
+            System.err.println("(TexturaPisoMojado)ADVERTENCIA: Texturas no cargadas aún");
             return null;
         }
         return regionPisoMojado;
@@ -238,7 +238,7 @@ public class GestorTexturas {
 
     public TextureRegion getTexturaMaquina(String nombreMaquina, EstadoMaquina estado) {
         if (!texturasListas) {
-            System.err.println("ADVERTENCIA: Texturas no cargadas aún");
+            System.err.println("(TexturaMaquina)ADVERTENCIA: Texturas no cargadas aún");
             return null;
         }
 
@@ -253,7 +253,7 @@ public class GestorTexturas {
 
     public TextureRegion[] getTexturasMaquina(String nombreMaquina) {
         if (!texturasListas) {
-            System.err.println("ADVERTENCIA: Texturas no cargadas aún");
+            System.err.println("(TexturasMaquina)ADVERTENCIA: Texturas no cargadas aún");
             return null;
         }
 

@@ -2,7 +2,6 @@ package com.hebergames.letmecook.red.paquetes;
 
 import com.hebergames.letmecook.red.PaqueteRed;
 
-// === PAQUETE INPUT ===
 public class PaqueteInput extends PaqueteRed {
     private int idJugador;
     private boolean arriba, abajo, izquierda, derecha, correr;

@@ -4,7 +4,7 @@ import com.hebergames.letmecook.red.PaqueteRed;
 
 public class PaqueteDesconexion extends PaqueteRed {
     private int idJugador;
-    private String razon; // "CIERRE_SERVIDOR", "JUGADOR_ABANDONO", "TIMEOUT"
+    private String razon;
 
     public PaqueteDesconexion(int idJugador, String razon) {
         this.idJugador = idJugador;

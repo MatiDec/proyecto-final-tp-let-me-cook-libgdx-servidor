@@ -4,7 +4,6 @@ import com.hebergames.letmecook.red.PaqueteRed;
 
 import java.util.ArrayList;
 
-// === PAQUETE ESTADO COMPLETO ===
 public class PaqueteEstado extends PaqueteRed {
     private DatosJugador jugador1;
     private DatosJugador jugador2;

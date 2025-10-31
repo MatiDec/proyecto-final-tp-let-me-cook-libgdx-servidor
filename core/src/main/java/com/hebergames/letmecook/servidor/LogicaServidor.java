@@ -3,10 +3,13 @@ package com.hebergames.letmecook.servidor;
 import com.badlogic.gdx.math.Rectangle;
 import com.hebergames.letmecook.entidades.Jugador;
 import com.hebergames.letmecook.entidades.clientes.*;
-import com.hebergames.letmecook.entregables.ObjetoAlmacenable;
 import com.hebergames.letmecook.entregables.ingredientes.TipoIngrediente;
 import com.hebergames.letmecook.entregables.productos.*;
 import com.hebergames.letmecook.estaciones.*;
+import com.hebergames.letmecook.estaciones.conmenu.Cafetera;
+import com.hebergames.letmecook.estaciones.conmenu.EstacionConMenu;
+import com.hebergames.letmecook.estaciones.conmenu.Fuente;
+import com.hebergames.letmecook.estaciones.conmenu.Mesa;
 import com.hebergames.letmecook.estaciones.interaccionclientes.CajaRegistradora;
 import com.hebergames.letmecook.estaciones.interaccionclientes.CajaVirtual;
 import com.hebergames.letmecook.estaciones.interaccionclientes.MesaRetiro;
@@ -17,8 +20,6 @@ import com.hebergames.letmecook.mapa.*;
 import com.hebergames.letmecook.mapa.niveles.*;
 import com.hebergames.letmecook.pedidos.*;
 import com.hebergames.letmecook.red.paquetes.*;
-import com.hebergames.letmecook.servidor.estacionesheadless.*;
-import com.hebergames.letmecook.utiles.GestorAnimacion;
 import java.util.*;
 
 public class LogicaServidor {
@@ -30,7 +31,7 @@ public class LogicaServidor {
     private GestorPuntaje gestorPuntaje;
     private ArrayList<EstacionTrabajo> estaciones;
     private Map<Integer, DatosEntrada> inputsJugadores;
-    private int tiempoRestante;
+    private float tiempoRestante;
     private boolean juegoTerminado;
     private String razonFin;
 
@@ -38,42 +39,36 @@ public class LogicaServidor {
         inputsJugadores = new HashMap<>();
         inputsJugadores.put(1, new DatosEntrada());
         inputsJugadores.put(2, new DatosEntrada());
-        tiempoRestante = 200;
+        tiempoRestante = 200f;
         juegoTerminado = false;
     }
 
     public void inicializar() {
-        // Inicializar mapa y partida
         GestorPartida gestorPartida = GestorPartida.getInstancia();
         ArrayList<String> rutasMapas = new ArrayList<>();
         rutasMapas.add("core/src/main/java/com/hebergames/letmecook/recursos/mapas/Sucursal_1.tmx");
+
+        // Generar partida en modo servidor
         gestorPartida.generarNuevaPartida(rutasMapas, 1, true);
 
         NivelPartida nivel = gestorPartida.getNivelActual();
-        MapaServidor mapaServidor = nivel.getMapaServidor();
         gestorMapa = new GestorMapa();
+        gestorMapa.setModoServidor(true);
+        gestorMapa.setMapaActual(nivel.getMapa());
 
-        // Obtener estaciones del mapa servidor (sin texturas)
-        estaciones = mapaServidor.getEstacionesTrabajo();
+        estaciones = gestorMapa.getEstaciones();
 
+        // Crear jugadores con animación null
         Rectangle spawnJ1 = gestorMapa.getPuntoSpawn("Jugador_1");
         float posXJ1 = (spawnJ1 != null) ? spawnJ1.x + (spawnJ1.width / 2f) - 64 : 1000;
         float posYJ1 = (spawnJ1 != null) ? spawnJ1.y + (spawnJ1.height / 2f) - 64 : 672;
+
         Rectangle spawnJ2 = gestorMapa.getPuntoSpawn("Jugador_2");
         float posXJ2 = (spawnJ2 != null) ? spawnJ2.x + (spawnJ2.width / 2f) - 64 : 1000;
         float posYJ2 = (spawnJ2 != null) ? spawnJ2.y + (spawnJ2.height / 2f) - 64 : 872;
 
-        // Crear jugadores (sin animaciones gráficas)
-        GestorAnimacion animVacio = null; // El servidor no necesita animaciones
-        jugador1 = new Jugador(posXJ1, posYJ1, animVacio);
-        jugador2 = new Jugador(posXJ2, posYJ2, animVacio);
-
-        // Asignar colisiones e interactuables
-        jugador1.setColisionables(mapaServidor.getRectangulosColision());
-        jugador1.setInteractuables(mapaServidor.getRectangulosInteractuables());
-
-        jugador2.setColisionables(mapaServidor.getRectangulosColision());
-        jugador2.setInteractuables(mapaServidor.getRectangulosInteractuables());
+        jugador1 = new Jugador(posXJ1, posYJ1, null); // null para servidor
+        jugador2 = new Jugador(posXJ2, posYJ2, null);
 
         gestorMapa.asignarColisionesYInteracciones(jugador1);
         gestorMapa.asignarColisionesYInteracciones(jugador2);
@@ -85,7 +80,7 @@ public class LogicaServidor {
         jugador1.setOtrosJugadores(jugadores);
         jugador2.setOtrosJugadores(jugadores);
 
-        // Inicializar sistema de pedidos
+        // Inicializar sistema de clientes y pedidos
         ArrayList<CajaRegistradora> cajas = new ArrayList<>();
         ArrayList<MesaRetiro> mesas = new ArrayList<>();
         ArrayList<CajaVirtual> cajasVirtuales = new ArrayList<>();
@@ -122,27 +117,22 @@ public class LogicaServidor {
     public void actualizar(float delta) {
         if (juegoTerminado) return;
 
-        // Aplicar inputs de jugadores
         jugador1.manejarEntrada(inputsJugadores.get(1));
         jugador2.manejarEntrada(inputsJugadores.get(2));
 
-        // Actualizar jugadores
         jugador1.actualizar(delta);
         jugador2.actualizar(delta);
 
-        // Actualizar clientes y pedidos
         gestorClientes.actualizar(delta);
 
-        // Actualizar estaciones
         for (EstacionTrabajo estacion : estaciones) {
             estacion.actualizar(delta);
             estacion.verificarDistanciaYLiberar();
         }
 
-        // Actualizar tiempo
-        tiempoRestante -= (int) delta;
+        // Decrementar tiempo correctamente
+        tiempoRestante -= delta;
 
-        // Verificar condiciones de fin
         if (tiempoRestante <= 0) {
             juegoTerminado = true;
             razonFin = gestorPuntaje.getPuntajeActual() < 600 ?
@@ -176,7 +166,6 @@ public class LogicaServidor {
         int indexEstacion = interaccion.getIndexEstacion();
 
         if (indexEstacion < 0 || indexEstacion >= estaciones.size()) {
-            System.err.println("Índice de estación inválido: " + indexEstacion);
             return;
         }
 
@@ -184,117 +173,15 @@ public class LogicaServidor {
 
         switch (interaccion.getTipoInteraccion()) {
             case INTERACTUAR_BASICO:
-                manejarInteraccionBasica(jugador, estacion);
+                estacion.interactuarConJugador(jugador);
                 break;
 
             case SELECCION_MENU:
-                manejarSeleccionMenu(jugador, estacion, interaccion.getParametroExtra());
-                break;
-
-            case TOMAR_INGREDIENTE:
-                manejarTomarIngrediente(jugador, estacion, interaccion.getParametroExtra());
-                break;
-
-            case DEPOSITAR_OBJETO:
-                manejarDepositarObjeto(jugador, estacion);
-                break;
-
-            case INICIAR_PROCESO:
-                manejarIniciarProceso(jugador, estacion);
-                break;
-
-            case RECOGER_RESULTADO:
-                manejarRecogerResultado(jugador, estacion);
+                if (estacion instanceof EstacionConMenu) {
+                    ((EstacionConMenu) estacion).manejarSeleccionMenu(jugador, interaccion.getParametroExtra() + 1);
+                }
                 break;
         }
-    }
-
-    private void manejarInteraccionBasica(Jugador jugador, EstacionTrabajo estacion) {
-        if (!estacion.estaCerca(jugador.getPosicion().x, jugador.getPosicion().y)) {
-            return;
-        }
-
-        // Si el jugador ya está en un menú de esta estación, salir
-        if (jugador.estaEnMenu() && jugador.getEstacionActual() == estacion) {
-            if (estacion instanceof HeladeraHeadless) {
-                ((HeladeraHeadless) estacion).cerrarMenu(jugador);
-            } else if (estacion instanceof MesaHeadless) {
-                ((MesaHeadless) estacion).cerrarMenu(jugador);
-            } else if (estacion instanceof CafeteraHeadless) {
-                ((CafeteraHeadless) estacion).cerrarMenu(jugador);
-            } else if (estacion instanceof FuenteHeadless) {
-                ((FuenteHeadless) estacion).cerrarMenu(jugador);
-            } else if (estacion instanceof MaquinaEnvasadoraHeadless) {
-                ((MaquinaEnvasadoraHeadless) estacion).cerrarMenu(jugador);
-            }
-            return;
-        }
-
-        // Abrir menú o interactuar según el tipo
-        if (estacion instanceof HeladeraHeadless) {
-            ((HeladeraHeadless) estacion).abrirMenu(jugador);
-        } else if (estacion instanceof MesaHeadless) {
-            ((MesaHeadless) estacion).abrirMenu(jugador);
-        } else if (estacion instanceof CafeteraHeadless) {
-            ((CafeteraHeadless) estacion).abrirMenu(jugador);
-        } else if (estacion instanceof FuenteHeadless) {
-            ((FuenteHeadless) estacion).abrirMenu(jugador);
-        } else if (estacion instanceof MaquinaEnvasadoraHeadless) {
-            ((MaquinaEnvasadoraHeadless) estacion).abrirMenu(jugador);
-        } else {
-            // Estaciones sin menú (procesadoras, basurero, etc.)
-            estacion.interactuarConJugador(jugador);
-        }
-    }
-
-    private void manejarSeleccionMenu(Jugador jugador, EstacionTrabajo estacion, int seleccion) {
-        if (estacion instanceof HeladeraHeadless) {
-            HeladeraHeadless heladera = (HeladeraHeadless) estacion;
-            heladera.darIngredientePorIndice(jugador, seleccion);
-        }
-        else if (estacion instanceof MesaHeadless) {
-            MesaHeadless mesa = (MesaHeadless) estacion;
-            mesa.manejarSeleccion(jugador, seleccion);
-        }
-        else if (estacion instanceof CafeteraHeadless) {
-            CafeteraHeadless cafetera = (CafeteraHeadless) estacion;
-            cafetera.procesarSeleccion(jugador, seleccion);
-        }
-        else if (estacion instanceof FuenteHeadless) {
-            FuenteHeadless fuente = (FuenteHeadless) estacion;
-            fuente.procesarSeleccion(jugador, seleccion);
-        }
-        else if (estacion instanceof MaquinaEnvasadoraHeadless) {
-            MaquinaEnvasadoraHeadless envasadora = (MaquinaEnvasadoraHeadless) estacion;
-            envasadora.procesarSeleccion(jugador, seleccion);
-        }
-    }
-
-    private void manejarTomarIngrediente(Jugador jugador, EstacionTrabajo estacion, int tipoIndex) {
-        if (estacion instanceof HeladeraHeadless) {
-            HeladeraHeadless heladera = (HeladeraHeadless) estacion;
-            TipoIngrediente tipo = obtenerTipoPorIndice(tipoIndex);
-            if (tipo != null) {
-                heladera.darIngrediente(jugador, tipo);
-            }
-        }
-    }
-
-    private void manejarDepositarObjeto(Jugador jugador, EstacionTrabajo estacion) {
-        if (estacion instanceof MesaHeadless) {
-            MesaHeadless mesa = (MesaHeadless) estacion;
-            if (jugador.getInventario() != null) {
-                mesa.depositarObjeto(jugador);
-            }
-        }
-    }
-
-    private void manejarIniciarProceso(Jugador jugador, EstacionTrabajo estacion) {
-        estacion.manejarProcesamiento(jugador);
-    }
-
-    private void manejarRecogerResultado(Jugador jugador, EstacionTrabajo estacion) {
-        estacion.manejarProcesamiento(jugador);
     }
 
     private TipoIngrediente obtenerTipoPorIndice(int indice) {
@@ -306,7 +193,6 @@ public class LogicaServidor {
     }
 
     public PaqueteEstado generarEstado() {
-        // Datos jugadores
         DatosJugador datosJ1 = new DatosJugador(
             jugador1.getPosicion().x,
             jugador1.getPosicion().y,
@@ -323,7 +209,6 @@ public class LogicaServidor {
             jugador2.estaEnMenu()
         );
 
-        // Datos clientes
         ArrayList<DatosCliente> datosClientes = new ArrayList<>();
         for (Cliente cliente : gestorClientes.getClientesActivos()) {
             ArrayList<String> productos = new ArrayList<>();
@@ -344,7 +229,6 @@ public class LogicaServidor {
             ));
         }
 
-        // Datos de todas las estaciones
         ArrayList<DatosEstacion> datosEstaciones = new ArrayList<>();
         for (int i = 0; i < estaciones.size(); i++) {
             EstacionTrabajo est = estaciones.get(i);
@@ -355,46 +239,40 @@ public class LogicaServidor {
         return new PaqueteEstado(
             datosJ1, datosJ2, datosClientes, datosEstaciones,
             gestorPuntaje.getPuntajeActual(),
-            tiempoRestante,
+            (int) tiempoRestante, // Convertir a int aquí
             juegoTerminado,
             razonFin != null ? razonFin : ""
         );
     }
 
     private DatosEstacion crearDatosEstacion(EstacionTrabajo est, int index) {
-        String tipoEstacion = est.getClass().getSimpleName().replace("Headless", "");
+        String tipoEstacion = est.getClass().getSimpleName();
         DatosEstacion datos = new DatosEstacion(index, tipoEstacion);
 
         datos.tieneJugador = (est.getJugadorOcupante() != null);
 
-        // Procesadoras (Horno, Freidora, Tostadora)
-        if (est.getProcesadora() instanceof ProcesadoraHeadless) {
-            ProcesadoraHeadless proc = (ProcesadoraHeadless) est.getProcesadora();
+        if (est.getProcesadora() instanceof Procesadora) {
+            Procesadora proc = (Procesadora) est.getProcesadora();
             datos.procesando = proc.tieneProcesandose();
-            datos.estadoIndicador = proc.getEstadoIndicador().toString();
-            datos.progresoProceso = proc.getProgreso(); // 👈 NUEVO
+            datos.estadoIndicador = proc.getIndicador() != null ?
+                proc.getIndicador().getEstado().toString() : "INACTIVO";
+            // Calcular progreso basado en tiempos
         }
 
-        // Mesa
-        else if (est instanceof MesaHeadless) {
-            MesaHeadless mesa = (MesaHeadless) est;
-            for (ObjetoAlmacenable obj : mesa.getObjetosEnMesa()) {
-                datos.objetosEnEstacion.add(obj.getNombre());
-            }
+        if (est instanceof Mesa) {
+            Mesa mesa = (Mesa) est;
+            // Agregar objetos en slots
         }
 
-        // Cafetera
-        else if (est instanceof CafeteraHeadless) {
-            CafeteraHeadless cafetera = (CafeteraHeadless) est;
-            datos.estadoMenuBebida = cafetera.getEstadoActual().toString();
-            datos.progresoPreparacion = cafetera.getProgreso();
+        if (est instanceof Cafetera) {
+            Cafetera cafetera = (Cafetera) est;
+            datos.estadoMenuBebida = cafetera.getEstadoMenu().toString();
+            // Agregar progreso
         }
 
-        // Fuente
-        else if (est instanceof FuenteHeadless) {
-            FuenteHeadless fuente = (FuenteHeadless) est;
-            datos.estadoMenuBebida = fuente.getEstadoActual().toString();
-            datos.progresoPreparacion = fuente.getProgreso();
+        if (est instanceof Fuente) {
+            Fuente fuente = (Fuente) est;
+            datos.estadoMenuBebida = fuente.getEstadoMenu().toString();
         }
 
         return datos;

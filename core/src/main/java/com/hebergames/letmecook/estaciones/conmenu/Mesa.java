@@ -170,6 +170,7 @@ public class Mesa extends EstacionConMenu {
 
     @Override
     protected void dibujarMenu(SpriteBatch batch, Jugador jugador) {
+        if (batch == null) return; // Servidor
         if (textosMenu == null || textosMenu.isEmpty()) return;
 
         List<Jugador> jugadores = GestorJugadores.getInstancia().getJugadores();
@@ -188,6 +189,10 @@ public class Mesa extends EstacionConMenu {
             texto.dibujarEnUi(batch);
             y -= ESPACIADO;
         }
+    }
+
+    public ObjetoAlmacenable[] getObjetosEnMesa() {
+        return SLOTS;
     }
 
     @Override

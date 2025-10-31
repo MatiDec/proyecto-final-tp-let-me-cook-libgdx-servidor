@@ -16,10 +16,7 @@ import com.hebergames.letmecook.estaciones.interaccionclientes.MesaRetiro;
 import com.hebergames.letmecook.estaciones.procesadoras.Freidora;
 import com.hebergames.letmecook.estaciones.procesadoras.Horno;
 import com.hebergames.letmecook.estaciones.procesadoras.Tostadora;
-import com.hebergames.letmecook.servidor.HeadlessTmxMapLoader;
-import com.hebergames.letmecook.red.ServerFileHandleResolver;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class Mapa {
@@ -27,17 +24,24 @@ public class Mapa {
     private final TiledMap MAPA;
     private final OrthogonalTiledMapRenderer RENDERER;
     private final String NOMBRE_SUCURSAL;
+    private boolean modoServidor = false;
 
-    public Mapa(String ruta, String nombreSucursal, boolean esServidor) {
-        this.NOMBRE_SUCURSAL = nombreSucursal;
+    public Mapa(String ruta, String NOMBRE_SUCURSAL) {
+        this(ruta, NOMBRE_SUCURSAL, false);
+    }
 
-        if (esServidor) {
-            throw new RuntimeException("ERROR: No usar Mapa en servidor. Usar MapaServidor en su lugar.");
-        }
+    public Mapa(String ruta, String NOMBRE_SUCURSAL, boolean modoServidor) {
+        this.NOMBRE_SUCURSAL = NOMBRE_SUCURSAL;
+        this.modoServidor = modoServidor;
 
         TmxMapLoader loader = new TmxMapLoader();
         this.MAPA = loader.load(ruta);
-        this.RENDERER = new OrthogonalTiledMapRenderer(MAPA);
+
+        if (!modoServidor) {
+            this.RENDERER = new OrthogonalTiledMapRenderer(MAPA);
+        } else {
+            this.RENDERER = null;
+        }
     }
 
     private ArrayList<Rectangle> obtenerRectangulosDeCapa(String nombreCapa) {
@@ -93,16 +97,13 @@ public class Mapa {
     }
 
     public void render(OrthographicCamera camara) {
-        if (RENDERER != null) {
-            RENDERER.setView(camara);
-            RENDERER.render();
-        }
+        if (RENDERER == null) return; // Servidor
+        RENDERER.setView(camara);
+        RENDERER.render();
     }
 
     public void dispose() {
-        if (MAPA != null) {
-            MAPA.dispose();
-        }
+        MAPA.dispose();
         if (RENDERER != null) {
             RENDERER.dispose();
         }

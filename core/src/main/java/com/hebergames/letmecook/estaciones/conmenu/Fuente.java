@@ -101,6 +101,7 @@ public class Fuente extends EstacionConMenu {
 
     @Override
     protected void dibujarMenu(SpriteBatch batch, Jugador jugador) {
+        if (batch == null) return; // Servidor
         float menuX = 100f;
         float menuY = 400f;
 
@@ -139,6 +140,15 @@ public class Fuente extends EstacionConMenu {
             TEXTO_MENU.setPosition(menuX, menuY + 40);
             TEXTO_MENU.dibujarEnUi(batch);
         }
+    }
+
+    public EstadoMenuBebida getEstadoMenu() {
+        return estadoMenu;
+    }
+
+    public float getProgreso() {
+        if (tiempoPreparacion == 0) return 0;
+        return tiempoTranscurrido / tiempoPreparacion;
     }
 
     @Override

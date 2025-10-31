@@ -1,7 +1,6 @@
 package com.hebergames.letmecook.mapa.niveles;
 
 import com.hebergames.letmecook.mapa.Mapa;
-import com.hebergames.letmecook.servidor.MapaServidor;
 import com.hebergames.letmecook.sonido.CancionNivel;
 
 import java.util.ArrayList;
@@ -26,7 +25,11 @@ public class GestorPartida {
         return instancia;
     }
 
-    public void generarNuevaPartida(ArrayList<String> rutasMapas, int cantidadNiveles, boolean esServidor) {
+    public void generarNuevaPartida(ArrayList<String> rutasMapas, int cantidadNiveles) {
+        generarNuevaPartida(rutasMapas, cantidadNiveles, false);
+    }
+
+    public void generarNuevaPartida(ArrayList<String> rutasMapas, int cantidadNiveles, boolean modoServidor) {
         NIVELES_PARTIDA.clear();
         nivelActual = 0;
         puntajeTotalPartida = 0;
@@ -40,15 +43,11 @@ public class GestorPartida {
             String rutaMapaElegida = rutasDisponibles.remove(indexMapa);
 
             TurnoTrabajo turnoAleatorio = TurnoTrabajo.values()[random.nextInt(TurnoTrabajo.values().length)];
+
             CancionNivel cancionNivel = cancionesDisponibles[i % cancionesDisponibles.length];
 
-            Object mapa;
-            if (esServidor) {
-                mapa = new MapaServidor(rutaMapaElegida, "Sucursal " + (i + 1));
-            } else {
-                mapa = new Mapa(rutaMapaElegida, "Sucursal " + (i + 1), false);
-            }
-            NIVELES_PARTIDA.add(new NivelPartida(mapa, turnoAleatorio, cancionNivel, true));
+            Mapa mapaGenerado = new Mapa(rutaMapaElegida, "Sucursal " + (i + 1), modoServidor);
+            NIVELES_PARTIDA.add(new NivelPartida(mapaGenerado, turnoAleatorio, cancionNivel, true));
         }
     }
 

@@ -30,14 +30,19 @@ public class Procesadora implements MaquinaProcesadora, CoccionListener {
     private final IndicadorVisual INDICADOR;
 
     public Procesadora(Rectangle area, String tipoMaquina) {
+        this(area, tipoMaquina, false);
+    }
+
+    public Procesadora(Rectangle area, String tipoMaquina, boolean modoServidor) {
         this.AREA = area;
         this.TIPO_MAQUINA = tipoMaquina;
-        inicializarIndicador();
-        this.INDICADOR = new IndicadorVisual(
+        this.INDICADOR = modoServidor ? null : new IndicadorVisual(
             area.x + area.width / 2f,
             area.y + area.height
         );
-        cargarTexturas();
+        if (!modoServidor) {
+            cargarTexturas();
+        }
     }
 
     private void cargarTexturas() {
@@ -109,6 +114,7 @@ public class Procesadora implements MaquinaProcesadora, CoccionListener {
     }
 
     public void dibujarEstado(SpriteBatch batch) {
+        if (batch == null || texturasMaquina == null) return; // Servidor
         if (!procesando && (ingredienteCocinando == null)) return;
 
         TextureRegion overlay = null;
@@ -172,5 +178,19 @@ public class Procesadora implements MaquinaProcesadora, CoccionListener {
             return texturasMaquina[EstadoMaquina.LISTA.getIndice()];
         }
         return texturasMaquina[EstadoMaquina.ACTIVA.getIndice()];
+    }
+
+    public EstadoIndicador getEstadoActual() {
+        if (ingredienteCocinando == null) return EstadoIndicador.INACTIVO;
+
+        if (ingredienteCocinando.estaQuemado()) {
+            return EstadoIndicador.QUEMANDOSE;
+        } else if (ingredienteCocinando.getEstadoCoccion() == EstadoCoccion.BIEN_HECHO) {
+            return EstadoIndicador.LISTO;
+        } else if (procesando) {
+            return EstadoIndicador.PROCESANDO;
+        }
+
+        return EstadoIndicador.INACTIVO;
     }
 }

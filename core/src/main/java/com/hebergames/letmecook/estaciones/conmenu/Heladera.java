@@ -89,6 +89,7 @@ public class Heladera extends EstacionConMenu {
 
     @Override
     protected void dibujarMenu(SpriteBatch batch, Jugador jugador) {
+        if (batch == null) return; // Servidor
         if (textosMenu == null || textosMenu.isEmpty()) {
             return;
         }

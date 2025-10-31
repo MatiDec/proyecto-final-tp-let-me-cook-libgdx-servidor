@@ -18,6 +18,7 @@ public class VisualizadorCliente {
     }
 
     public void dibujar(SpriteBatch batch, Cliente cliente) {
+        if (batch == null) return; // Servidor
         EstacionTrabajo estacion = cliente.getEstacionAsignada();
 
         if (estacion == null || cliente.esVirtual()) return;

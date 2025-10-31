@@ -2,7 +2,6 @@ package com.hebergames.letmecook.red.paquetes;
 
 import java.io.Serializable;
 
-// === DATOS ESTADO JUGADOR ===
 public class DatosJugador implements Serializable {
     public float x, y;
     public float angulo;

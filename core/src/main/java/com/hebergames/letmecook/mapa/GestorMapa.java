@@ -18,6 +18,7 @@ public class GestorMapa {
 
     private Mapa mapaActual;
     private ArrayList<EstacionTrabajo> estaciones;
+    private boolean modoServidor = false;
 
     public GestorMapa() {
         this.estaciones = new ArrayList<>();
@@ -32,9 +33,8 @@ public class GestorMapa {
     }
 
     public void renderizar(OrthographicCamera camara) {
-        if (mapaActual != null) {
-            mapaActual.render(camara);
-        }
+        if (modoServidor || mapaActual == null) return; // No renderizar en servidor
+        mapaActual.render(camara);
     }
 
     public void actualizarEstaciones(float delta) {
@@ -45,6 +45,7 @@ public class GestorMapa {
     }
 
     public void dibujarIndicadores(SpriteBatch batch) {
+        if (modoServidor) return; // No dibujar en servidor
         GestorEventosAleatorios gestorEventos = GestorEventosAleatorios.getInstancia();
         EventoPisoMojado eventoPiso = gestorEventos.getEventoPisoMojado();
         if (eventoPiso != null) {
@@ -95,6 +96,10 @@ public class GestorMapa {
             return mapaActual.getTilesCaminables();
         }
         return new ArrayList<>();
+    }
+
+    public void setModoServidor(boolean modo) {
+        this.modoServidor = modo;
     }
 
     public void dispose() {

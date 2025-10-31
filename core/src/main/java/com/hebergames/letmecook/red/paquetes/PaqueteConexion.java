@@ -2,7 +2,6 @@ package com.hebergames.letmecook.red.paquetes;
 
 import com.hebergames.letmecook.red.PaqueteRed;
 
-// === PAQUETE CONEXIÓN ===
 public class PaqueteConexion extends PaqueteRed {
     private int idJugador;
     private boolean esAprobado;

@@ -27,6 +27,7 @@ public class Jugador {
     protected float anguloRotacion = 0f;
     private final Rectangle HITBOX;
     private final float ANCHO_HITBOX = 120;
+    private final float ALTO_HITBOX = 120;
     private final float OFFSET_HITBOX_X = 0;
     private final float OFFSET_HITBOX_Y = 0;
 
@@ -58,19 +59,20 @@ public class Jugador {
         this.velocidad = new Vector2(0, 0);
         this.gestorAnimacion = gestorAnimacion;
 
-        // Inicialización segura de animación
+        // Hacer animación opcional (para servidor)
         if (gestorAnimacion != null) {
             this.animacion = gestorAnimacion.getAnimacionPorObjeto(objetoEnMano);
-        } else {
-            this.animacion = null; // Headless / servidor
         }
 
         this.estadoTiempo = 0;
-        float ALTO_HITBOX = 120;
         this.HITBOX = new Rectangle(x + OFFSET_HITBOX_X, y + OFFSET_HITBOX_Y, ANCHO_HITBOX, ALTO_HITBOX);
     }
 
     public void actualizar(float delta) {
+        if (animacion != null) {
+            frameActual = animacion.getKeyFrame(estadoTiempo, true);
+        }
+
         if (velocidad.isZero(0.01f) && !estaDeslizando) {
             if (animacion != null) frameActual = animacion.getKeyFrame(0, true);
             return;
@@ -143,7 +145,8 @@ public class Jugador {
     }
 
     public void dibujar(SpriteBatch batch) {
-        if (animacion != null && frameActual != null) {
+        if (frameActual == null) return;
+        if (animacion != null) {
             float x = posicion.x;
             float y = posicion.y;
             float width = 128;
@@ -320,12 +323,10 @@ public class Jugador {
     public void setObjetoEnMano(String nombreObjeto) {
         if (!nombreObjeto.equalsIgnoreCase(this.objetoEnMano)) {
             this.objetoEnMano = nombreObjeto;
-            if (gestorAnimacion != null) {
+            if (gestorAnimacion != null) { // Verificar null
                 this.animacion = gestorAnimacion.getAnimacionPorObjeto(nombreObjeto);
-            } else {
-                this.animacion = null; // Headless
+                this.estadoTiempo = 0;
             }
-            this.estadoTiempo = 0;
         }
     }
 

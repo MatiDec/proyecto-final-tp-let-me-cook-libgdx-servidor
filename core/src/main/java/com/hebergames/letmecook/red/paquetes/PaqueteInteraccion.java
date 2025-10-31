@@ -6,15 +6,15 @@ public class PaqueteInteraccion extends PaqueteRed {
     private int idJugador;
     private int indexEstacion;
     private TipoInteraccion tipoInteraccion;
-    private int parametroExtra; // Para selecciones de menú, etc.
+    private int parametroExtra;
 
     public enum TipoInteraccion {
-        INTERACTUAR_BASICO,      // E simple
-        SELECCION_MENU,          // Número del menú
-        TOMAR_INGREDIENTE,       // De heladera
-        DEPOSITAR_OBJETO,        // En mesa
-        INICIAR_PROCESO,         // En máquina procesadora
-        RECOGER_RESULTADO        // De máquina procesadora
+        INTERACTUAR_BASICO,
+        SELECCION_MENU,
+        TOMAR_INGREDIENTE,
+        DEPOSITAR_OBJETO,
+        INICIAR_PROCESO,
+        RECOGER_RESULTADO
     }
 
     public PaqueteInteraccion(int idJugador, int indexEstacion, TipoInteraccion tipo) {

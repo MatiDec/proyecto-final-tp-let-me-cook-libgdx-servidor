@@ -60,6 +60,7 @@ public class GestorIndicadores {
     }
 
     public void dibujar(SpriteBatch batch) {
+        if (batch == null) return; // Servidor
         for (IndicadorVisual indicador : INDICADORES) {
             indicador.dibujar(batch);
         }
