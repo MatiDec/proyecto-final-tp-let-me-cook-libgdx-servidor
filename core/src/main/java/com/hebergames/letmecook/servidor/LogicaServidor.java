@@ -135,6 +135,11 @@ public class LogicaServidor {
         }
     }
 
+    public void finalizarPorDesconexion(String razon) {
+        juegoTerminado = true;
+        razonFin = razon;
+    }
+
     public void procesarInput(PaqueteInput input) {
         DatosEntrada datos = inputsJugadores.get(input.getIdJugador());
         if (datos != null) {

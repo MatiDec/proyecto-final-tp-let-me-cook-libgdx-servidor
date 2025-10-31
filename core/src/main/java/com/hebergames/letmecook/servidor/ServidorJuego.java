@@ -1,5 +1,6 @@
 package com.hebergames.letmecook.servidor;
 
+import com.badlogic.gdx.Gdx;
 import com.hebergames.letmecook.red.PaqueteRed;
 import com.hebergames.letmecook.red.paquetes.*;
 import java.net.*;
@@ -16,20 +17,10 @@ public class ServidorJuego {
     private LogicaServidor logicaJuego;
     private Map<String, InfoJugador> jugadoresConectados;
     private ScheduledExecutorService scheduler;
-
-    private static class InfoJugador {
-        InetAddress direccion;
-        int puerto;
-        int id;
-        long ultimoPing;
-
-        InfoJugador(InetAddress direccion, int puerto, int id) {
-            this.direccion = direccion;
-            this.puerto = puerto;
-            this.id = id;
-            this.ultimoPing = System.currentTimeMillis();
-        }
-    }
+    private ScheduledFuture<?> tareaVerificacionConexiones;
+    private ScheduledFuture<?> tareaEnvioEstados;
+    private HiloReceptorPaquetes hiloReceptor;
+    private static final long TIMEOUT_CONEXION = 5000;
 
     public ServidorJuego() {
         jugadoresConectados = new ConcurrentHashMap<>();
@@ -45,37 +36,24 @@ public class ServidorJuego {
             System.out.println("Esperando jugadores...");
 
             // Hilo para recibir paquetes
-            new Thread(this::recibirPaquetes).start();
+            hiloReceptor = new HiloReceptorPaquetes(this, socket);
+            new Thread(hiloReceptor, "HiloReceptorPaquetes").start();
 
-            // Hilo para enviar estado del juego
-            scheduler.scheduleAtFixedRate(this::enviarEstadoJuego,
+            // Tarea para enviar estado del juego
+            tareaEnvioEstados = scheduler.scheduleAtFixedRate(this::enviarEstadoJuego,
                 0, 1000 / TICK_RATE, TimeUnit.MILLISECONDS);
+
+            // Tarea de verificación de conexiones
+            tareaVerificacionConexiones = scheduler.scheduleAtFixedRate(
+                this::verificarConexiones,
+                0, 1000, TimeUnit.MILLISECONDS);
 
         } catch (Exception e) {
             System.err.println("Error al iniciar servidor: " + e.getMessage());
         }
     }
 
-    private void recibirPaquetes() {
-        byte[] buffer = new byte[4096];
-
-        while (ejecutando) {
-            try {
-                DatagramPacket paqueteRecibido = new DatagramPacket(buffer, buffer.length);
-                socket.receive(paqueteRecibido);
-
-                PaqueteRed paquete = PaqueteRed.deserializar(paqueteRecibido.getData());
-                procesarPaquete(paquete, paqueteRecibido.getAddress(), paqueteRecibido.getPort());
-
-            } catch (Exception e) {
-                if (ejecutando) {
-                    System.err.println("Error recibiendo paquete: " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    private void procesarPaquete(PaqueteRed paquete, InetAddress direccion, int puerto) {
+    void procesarPaquete(PaqueteRed paquete, InetAddress direccion, int puerto) {
         switch (paquete.getTipo()) {
             case CONEXION:
                 manejarConexion(direccion, puerto);
@@ -124,16 +102,21 @@ public class ServidorJuego {
 
     private void iniciarJuego() {
         System.out.println("Inicializando lógica del juego...");
-        logicaJuego = new LogicaServidor();
 
-        try {
-            logicaJuego.inicializar();
-            System.out.println("Juego inicializado correctamente. Comenzando envío de estados.");
-        } catch (Exception e) {
-            System.err.println("Error al inicializar juego: " + e.getMessage());
-            e.printStackTrace();
-            logicaJuego = null;
-        }
+        // La inicialización debe hacerse en el hilo de renderizado de LibGDX
+        // porque crea texturas y otros recursos de OpenGL
+        Gdx.app.postRunnable(() -> {
+            logicaJuego = new LogicaServidor();
+
+            try {
+                logicaJuego.inicializar();
+                System.out.println("Juego inicializado correctamente. Comenzando envío de estados.");
+            } catch (Exception e) {
+                System.err.println("Error al inicializar juego: " + e.getMessage());
+                e.printStackTrace();
+                logicaJuego = null;
+            }
+        });
     }
 
     private void enviarEstadoJuego() {
@@ -157,6 +140,43 @@ public class ServidorJuego {
         }
     }
 
+    private void verificarConexiones() {
+        long tiempoActual = System.currentTimeMillis();
+        List<String> jugadoresDesconectados = new ArrayList<>();
+
+        for (Map.Entry<String, InfoJugador> entry : jugadoresConectados.entrySet()) {
+            if (tiempoActual - entry.getValue().ultimoPing > TIMEOUT_CONEXION) {
+                jugadoresDesconectados.add(entry.getKey());
+            }
+        }
+
+        for (String key : jugadoresDesconectados) {
+            InfoJugador jugador = jugadoresConectados.remove(key);
+            if (jugador != null) {
+                System.out.println("Jugador " + jugador.id + " desconectado por timeout");
+                notificarDesconexionJugador(jugador.id, "TIMEOUT");
+            }
+        }
+    }
+
+    private void notificarDesconexionJugador(int idJugador, String razon) {
+        System.out.println("Notificando desconexión del jugador " + idJugador + " por: " + razon);
+
+        if (logicaJuego != null) {
+            logicaJuego.finalizarPorDesconexion("Jugador " + idJugador + " desconectado");
+        }
+
+        PaqueteDesconexion paqueteDesc = new PaqueteDesconexion(idJugador, razon);
+        for (InfoJugador jugador : jugadoresConectados.values()) {
+            try {
+                enviarPaquete(paqueteDesc, jugador.direccion, jugador.puerto);
+                Thread.sleep(50);
+                enviarPaquete(paqueteDesc, jugador.direccion, jugador.puerto);
+            } catch (Exception e) {
+                System.err.println("Error notificando desconexión: " + e.getMessage());
+            }
+        }
+    }
 
     private void enviarPaquete(PaqueteRed paquete, InetAddress direccion, int puerto) {
         try {
@@ -180,20 +200,55 @@ public class ServidorJuego {
         String key = direccion.getHostAddress() + ":" + puerto;
         InfoJugador jugador = jugadoresConectados.remove(key);
         if (jugador != null) {
-            System.out.println("Jugador " + jugador.id + " desconectado");
+            System.out.println("Jugador " + jugador.id + " desconectado voluntariamente");
+            notificarDesconexionJugador(jugador.id, "JUGADOR_ABANDONO");
         }
     }
 
     public void detener() {
+        System.out.println("Cerrando servidor...");
         ejecutando = false;
+
+        // Notificar a todos los clientes que el servidor se cierra
+        PaqueteDesconexion paqueteCierre = new PaqueteDesconexion(0, "CIERRE_SERVIDOR");
+        for (InfoJugador jugador : jugadoresConectados.values()) {
+            try {
+                enviarPaquete(paqueteCierre, jugador.direccion, jugador.puerto);
+                Thread.sleep(50);
+                enviarPaquete(paqueteCierre, jugador.direccion, jugador.puerto);
+                Thread.sleep(50);
+                enviarPaquete(paqueteCierre, jugador.direccion, jugador.puerto);
+            } catch (Exception e) {
+                System.err.println("Error notificando cierre a jugador: " + e.getMessage());
+            }
+        }
+
+        // Esperar un momento para que los paquetes se envíen
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // Detener hilo receptor
+        if (hiloReceptor != null) {
+            hiloReceptor.detener();
+        }
+
+        // Cancelar tareas programadas
+        if (tareaVerificacionConexiones != null) {
+            tareaVerificacionConexiones.cancel(true);
+        }
+        if (tareaEnvioEstados != null) {
+            tareaEnvioEstados.cancel(true);
+        }
+
         scheduler.shutdown();
+
         if (socket != null) {
             socket.close();
         }
-    }
 
-    public static void main(String[] args) {
-        ServidorJuego servidor = new ServidorJuego();
-        servidor.iniciar();
+        System.out.println("Servidor cerrado completamente");
     }
 }
