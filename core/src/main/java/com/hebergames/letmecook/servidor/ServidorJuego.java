@@ -120,6 +120,11 @@ public class ServidorJuego {
     private void manejarConexion(InetAddress direccion, int puerto) {
         String key = direccion.getHostAddress() + ":" + puerto;
 
+        if (jugadoresConectados.containsKey(key)) {
+            System.out.println("El jugador " + key + " ya esta conectado. Ignorando paquete de conexion duplicado.");
+            return;
+        }
+
         if (jugadoresConectados.size() >= MAX_JUGADORES) {
             enviarPaquete(new PaqueteConexion(-1, false), direccion, puerto);
             return;
