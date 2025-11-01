@@ -34,7 +34,7 @@ public class HiloReceptorPaquetes implements Runnable {
                 Gdx.app.postRunnable(() -> {
                     servidor.procesarPaquete(paquete, direccion, puerto);
                 });
-                servidor.procesarPaquete(paquete, paqueteRecibido.getAddress(), paqueteRecibido.getPort());
+
 
             } catch (Exception e) {
                 if (ejecutando) {
