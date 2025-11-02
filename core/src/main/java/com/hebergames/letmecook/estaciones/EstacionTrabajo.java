@@ -204,4 +204,8 @@ public abstract class EstacionTrabajo {
     public abstract void alInteractuar();
 
     public MaquinaProcesadora getProcesadora() { return this.procesadora; }
+
+    public boolean isFueraDeServicio() {
+        return this.fueraDeServicio;
+    }
 }

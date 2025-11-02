@@ -15,4 +15,12 @@ public class DatosEntrada {
     public void soltar(int keycode) {
         this.TECLAS_PRESIONADAS.remove(keycode);
     }
+
+    public void reset() {
+        this.arriba = false;
+        this.abajo = false;
+        this.izquierda = false;
+        this.derecha = false;
+        this.correr = false;
+    }
 }

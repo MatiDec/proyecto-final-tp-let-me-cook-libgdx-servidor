@@ -9,7 +9,7 @@ import java.util.concurrent.*;
 
 public class ServidorJuego {
     private static final int PUERTO = 25565;
-    private static final int TICK_RATE = 30;
+    private static final int TICK_RATE = 60;
     private static final int MAX_JUGADORES = 2;
 
     private DatagramSocket socket;
@@ -81,7 +81,7 @@ public class ServidorJuego {
         }
     }
 
-    void procesarPaquete(PaqueteRed paquete, InetAddress direccion, int puerto) {
+    public void procesarPaquete(PaqueteRed paquete, InetAddress direccion, int puerto) {
         switch (paquete.getTipo()) {
             case CONEXION:
                 Gdx.app.postRunnable(() -> manejarConexion(direccion, puerto));
@@ -113,6 +113,11 @@ public class ServidorJuego {
                     }
                 });
                 actualizarPing(direccion, puerto);
+                break;
+
+            case INICIO_PARTIDA:
+                break;
+            case CAMBIO_NIVEL:
                 break;
         }
     }
@@ -154,6 +159,14 @@ public class ServidorJuego {
                 logicaJuego.inicializar();
                 ultimaActualizacion = System.currentTimeMillis();
                 System.out.println("Juego inicializado correctamente.");
+
+                // 👇 NUEVO - Enviar configuración de la partida a ambos clientes
+                PaqueteInicioPartida paqueteInicio = logicaJuego.generarPaqueteInicio();
+                for (InfoJugador jugador : jugadoresConectados.values()) {
+                    enviarPaquete(paqueteInicio, jugador.direccion, jugador.puerto);
+                }
+                System.out.println("Configuración de partida enviada a todos los clientes");
+
             } catch (Exception e) {
                 System.err.println("Error al inicializar juego: " + e.getMessage());
                 e.printStackTrace();
@@ -168,11 +181,41 @@ public class ServidorJuego {
         try {
             PaqueteEstado estado = logicaJuego.generarEstado();
 
-            for (InfoJugador jugador : jugadoresConectados.values()) {
-                enviarPaquete(estado, jugador.direccion, jugador.puerto);
+            // ✅ Verificar si el nivel terminó exitosamente
+            if (estado.isJuegoTerminado() && !estado.getRazonFin().isEmpty()) {
+                // Es despido, enviar estado normal
+                for (InfoJugador jugador : jugadoresConectados.values()) {
+                    enviarPaquete(estado, jugador.direccion, jugador.puerto);
+                }
+            } else if (estado.isJuegoTerminado()) {
+                // ✅ Nivel completado, intentar cambiar de nivel
+                PaqueteCambioNivel paqueteCambio = logicaJuego.generarPaqueteCambioNivel();
+
+                if (paqueteCambio != null) {
+                    // Hay más niveles, enviar paquete de cambio
+                    for (InfoJugador jugador : jugadoresConectados.values()) {
+                        enviarPaquete(paqueteCambio, jugador.direccion, jugador.puerto);
+                    }
+
+                    // Reiniciar servidor para nuevo nivel
+                    Thread.sleep(100); // Dar tiempo a que lleguen los paquetes
+                    logicaJuego.reiniciarParaNuevoNivel();
+                    System.out.println("✅ Servidor reiniciado para nuevo nivel");
+                } else {
+                    // No hay más niveles, enviar estado final
+                    for (InfoJugador jugador : jugadoresConectados.values()) {
+                        enviarPaquete(estado, jugador.direccion, jugador.puerto);
+                    }
+                }
+            } else {
+                // Juego en curso, enviar estado normal
+                for (InfoJugador jugador : jugadoresConectados.values()) {
+                    enviarPaquete(estado, jugador.direccion, jugador.puerto);
+                }
             }
         } catch (Exception e) {
             System.err.println("Error enviando estado: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 
 public class Mapa {
 
+    private final String RUTA_COMPLETA;
     private final TiledMap MAPA;
     private final OrthogonalTiledMapRenderer RENDERER;
     private final String NOMBRE_SUCURSAL;
@@ -34,6 +35,7 @@ public class Mapa {
         this.NOMBRE_SUCURSAL = NOMBRE_SUCURSAL;
         this.modoServidor = modoServidor;
 
+        this.RUTA_COMPLETA = ruta;
         TmxMapLoader loader = new TmxMapLoader();
         this.MAPA = loader.load(ruta);
 
@@ -177,5 +179,9 @@ public class Mapa {
 
     public String getNombre() {
         return this.NOMBRE_SUCURSAL;
+    }
+
+    public String getRutaCompleta() {
+        return this.RUTA_COMPLETA;
     }
 }

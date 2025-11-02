@@ -3,62 +3,97 @@ package com.hebergames.letmecook.servidor;
 import com.badlogic.gdx.math.Rectangle;
 import com.hebergames.letmecook.entidades.Jugador;
 import com.hebergames.letmecook.entidades.clientes.*;
-import com.hebergames.letmecook.entregables.ingredientes.TipoIngrediente;
 import com.hebergames.letmecook.entregables.productos.*;
 import com.hebergames.letmecook.estaciones.*;
-import com.hebergames.letmecook.estaciones.conmenu.Cafetera;
-import com.hebergames.letmecook.estaciones.conmenu.EstacionConMenu;
-import com.hebergames.letmecook.estaciones.conmenu.Fuente;
-import com.hebergames.letmecook.estaciones.conmenu.Mesa;
-import com.hebergames.letmecook.estaciones.interaccionclientes.CajaRegistradora;
-import com.hebergames.letmecook.estaciones.interaccionclientes.CajaVirtual;
-import com.hebergames.letmecook.estaciones.interaccionclientes.MesaRetiro;
+import com.hebergames.letmecook.estaciones.conmenu.*;
+import com.hebergames.letmecook.estaciones.interaccionclientes.*;
 import com.hebergames.letmecook.estaciones.procesadoras.Procesadora;
 import com.hebergames.letmecook.eventos.entrada.DatosEntrada;
+import com.hebergames.letmecook.eventos.eventosaleatorios.*;
 import com.hebergames.letmecook.eventos.puntaje.GestorPuntaje;
 import com.hebergames.letmecook.mapa.*;
+import com.hebergames.letmecook.mapa.indicadores.EstadoIndicador;
 import com.hebergames.letmecook.mapa.niveles.*;
+import com.hebergames.letmecook.pantallas.juego.DetectorInactividad;
 import com.hebergames.letmecook.pedidos.*;
 import com.hebergames.letmecook.red.paquetes.*;
+
 import java.util.*;
 
 public class LogicaServidor {
+    // Configuración del juego
+    private final int MIN_CLIENTES_SUCURSAL_CHICA = 10;
+    private final int MIN_CLIENTES_SUCURSAL_GRANDE = 20;
+    private final int TIEMPO_OBJETIVO = 200;
+    private final float TIEMPO_LIMITE_INACTIVIDAD = 10f;
+    private final int CANTIDAD_MAPAS = 7;
+
+    // Entidades principales
     private Jugador jugador1;
     private Jugador jugador2;
+    private ArrayList<Jugador> jugadores;
+
+    // Gestores del juego
     private GestorMapa gestorMapa;
     private GestorClientes gestorClientes;
     private GestorPedidos gestorPedidos;
     private GestorPuntaje gestorPuntaje;
+    private GestorPartida gestorPartida;
+    private DetectorInactividad detectorInactividad;
+
+    // Estado del juego
     private ArrayList<EstacionTrabajo> estaciones;
     private Map<Integer, DatosEntrada> inputsJugadores;
     private float tiempoRestante;
     private boolean juegoTerminado;
-    private String razonFin;
+    private String razonDespido;
+    private boolean despedido;
+
+    // Nivel actual
+    private NivelPartida nivelActual;
 
     public LogicaServidor() {
         inputsJugadores = new HashMap<>();
         inputsJugadores.put(1, new DatosEntrada());
         inputsJugadores.put(2, new DatosEntrada());
-        tiempoRestante = 200f;
+        tiempoRestante = TIEMPO_OBJETIVO;
         juegoTerminado = false;
+        despedido = false;
+        razonDespido = "";
+        jugadores = new ArrayList<>();
     }
 
     public void inicializar() {
-        GestorPartida gestorPartida = GestorPartida.getInstancia();
-        ArrayList<String> rutasMapas = new ArrayList<>();
-        rutasMapas.add("core/src/main/java/com/hebergames/letmecook/recursos/mapas/Sucursal_1.tmx");
+        gestorPartida = GestorPartida.getInstancia();
+        gestorPuntaje = new GestorPuntaje();
 
         // Generar partida en modo servidor
-        gestorPartida.generarNuevaPartida(rutasMapas, 1, true);
+        if (gestorPartida.getNivelActual() == null) {
+            ArrayList<String> rutasMapas = new ArrayList<>();
+            for (int i = 1; i <= CANTIDAD_MAPAS; i++) {
+                rutasMapas.add("core/src/main/java/com/hebergames/letmecook/recursos/mapas/Sucursal_" + i + ".tmx");
+            }
+            gestorPartida.generarNuevaPartida(rutasMapas, rutasMapas.size(), true);
+        }
 
-        NivelPartida nivel = gestorPartida.getNivelActual();
+        nivelActual = gestorPartida.getNivelActual();
+
+        inicializarMapa();
+        inicializarJugadores();
+        inicializarSistemaPedidos();
+        inicializarEventosAleatorios();
+
+        detectorInactividad = new DetectorInactividad(jugadores, TIEMPO_LIMITE_INACTIVIDAD);
+    }
+
+    private void inicializarMapa() {
         gestorMapa = new GestorMapa();
         gestorMapa.setModoServidor(true);
-        gestorMapa.setMapaActual(nivel.getMapa());
-
+        gestorMapa.setMapaActual(nivelActual.getMapa());
         estaciones = gestorMapa.getEstaciones();
+    }
 
-        // Crear jugadores con animación null
+    private void inicializarJugadores() {
         Rectangle spawnJ1 = gestorMapa.getPuntoSpawn("Jugador_1");
         float posXJ1 = (spawnJ1 != null) ? spawnJ1.x + (spawnJ1.width / 2f) - 64 : 1000;
         float posYJ1 = (spawnJ1 != null) ? spawnJ1.y + (spawnJ1.height / 2f) - 64 : 672;
@@ -67,33 +102,39 @@ public class LogicaServidor {
         float posXJ2 = (spawnJ2 != null) ? spawnJ2.x + (spawnJ2.width / 2f) - 64 : 1000;
         float posYJ2 = (spawnJ2 != null) ? spawnJ2.y + (spawnJ2.height / 2f) - 64 : 872;
 
-        jugador1 = new Jugador(posXJ1, posYJ1, null); // null para servidor
+        jugador1 = new Jugador(posXJ1, posYJ1, null); // null para servidor (sin animación)
         jugador2 = new Jugador(posXJ2, posYJ2, null);
 
         gestorMapa.asignarColisionesYInteracciones(jugador1);
         gestorMapa.asignarColisionesYInteracciones(jugador2);
 
-        ArrayList<Jugador> jugadores = new ArrayList<>();
         jugadores.add(jugador1);
         jugadores.add(jugador2);
 
         jugador1.setOtrosJugadores(jugadores);
         jugador2.setOtrosJugadores(jugadores);
+    }
 
-        // Inicializar sistema de clientes y pedidos
+    private void inicializarSistemaPedidos() {
         ArrayList<CajaRegistradora> cajas = new ArrayList<>();
         ArrayList<MesaRetiro> mesas = new ArrayList<>();
         ArrayList<CajaVirtual> cajasVirtuales = new ArrayList<>();
 
         for (EstacionTrabajo estacion : estaciones) {
-            if (estacion instanceof CajaRegistradora) cajas.add((CajaRegistradora) estacion);
-            else if (estacion instanceof MesaRetiro) mesas.add((MesaRetiro) estacion);
-            else if (estacion instanceof CajaVirtual) cajasVirtuales.add((CajaVirtual) estacion);
+            if (estacion instanceof CajaRegistradora) {
+                cajas.add((CajaRegistradora) estacion);
+            } else if (estacion instanceof MesaRetiro) {
+                mesas.add((MesaRetiro) estacion);
+            } else if (estacion instanceof CajaVirtual) {
+                cajasVirtuales.add((CajaVirtual) estacion);
+            }
         }
 
-        gestorClientes = new GestorClientes(cajas, cajasVirtuales, 15f, nivel.getTurno(), 10);
+        TurnoTrabajo turnoActual = nivelActual.getTurno();
+        int minClientesRequeridos = calcularMinClientesRequeridos();
+
+        gestorClientes = new GestorClientes(cajas, cajasVirtuales, 15f, turnoActual, minClientesRequeridos);
         gestorPedidos = new GestorPedidos(gestorClientes, mesas);
-        gestorPuntaje = new GestorPuntaje();
 
         gestorClientes.setCallbackPenalizacion((puntos, razon) -> {
             gestorPuntaje.agregarPuntos(puntos);
@@ -114,40 +155,120 @@ public class LogicaServidor {
         }
     }
 
+    private void inicializarEventosAleatorios() {
+        GestorEventosAleatorios gestorEventos = GestorEventosAleatorios.getInstancia();
+        gestorEventos.reset();
+
+        for (EstacionTrabajo estacion : estaciones) {
+            if (!(estacion instanceof CajaRegistradora) &&
+                !(estacion instanceof MesaRetiro) &&
+                !(estacion instanceof CajaVirtual)) {
+                gestorEventos.registrarEventoPosible(new EventoMaquinaRota(estacion));
+            }
+        }
+
+        ArrayList<Rectangle> tilesCaminables = gestorMapa.getTilesCaminables();
+        if (!tilesCaminables.isEmpty()) {
+            gestorEventos.registrarEventoPosible(new EventoPisoMojado(tilesCaminables));
+        }
+
+        gestorEventos.iniciarRonda();
+    }
+
+    private int calcularMinClientesRequeridos() {
+        int nivelActualIndex = gestorPartida.getNivelActualIndex();
+        if (nivelActualIndex == 0 || nivelActualIndex == 2) {
+            return MIN_CLIENTES_SUCURSAL_CHICA;
+        } else {
+            return MIN_CLIENTES_SUCURSAL_GRANDE;
+        }
+    }
+
     public void actualizar(float delta) {
         if (juegoTerminado) return;
 
+        // Actualizar jugadores
         jugador1.manejarEntrada(inputsJugadores.get(1));
         jugador2.manejarEntrada(inputsJugadores.get(2));
 
         jugador1.actualizar(delta);
         jugador2.actualizar(delta);
 
-        gestorClientes.actualizar(delta);
+        // Actualizar clientes y estaciones
+        if (gestorClientes != null) {
+            gestorClientes.actualizar(delta);
+        }
 
         for (EstacionTrabajo estacion : estaciones) {
             estacion.actualizar(delta);
             estacion.verificarDistanciaYLiberar();
         }
 
-        // Decrementar tiempo correctamente
+        // Actualizar detector de inactividad
+        detectorInactividad.actualizar(delta);
+
+        // Decrementar tiempo
         tiempoRestante -= delta;
 
-        if (tiempoRestante <= 0) {
+        // Verificar fin de juego
+        verificarFinDeJuego();
+    }
+
+    private void verificarFinDeJuego() {
+        // Verificar inactividad
+        if (detectorInactividad.haySuperadoLimite()) {
+            despedido = true;
+            razonDespido = "Despedido por inactividad";
             juegoTerminado = true;
-            razonFin = gestorPuntaje.getPuntajeActual() < 600 ?
-                "Puntaje insuficiente" : "Completado";
+            return;
         }
 
-        if (gestorClientes.haAlcanzadoLimiteClientes()) {
+        // Verificar límite de clientes
+        if (gestorClientes != null && gestorClientes.haAlcanzadoLimiteClientes()) {
+            int puntajeFinal = gestorPuntaje.getPuntajeActual();
+
+            if (puntajeFinal < 600) {
+                despedido = true;
+                razonDespido = "Puntaje insuficiente (menos de 600 puntos)";
+                juegoTerminado = true;
+                return;
+            }
+
+            if (gestorClientes.cumpleRequisitoMinimo()) {
+                despedido = true;
+                razonDespido = "No atendiste a suficientes clientes (" +
+                    gestorClientes.getClientesAtendidos() + "/" +
+                    gestorClientes.getMinClientesRequeridos() + ")";
+                juegoTerminado = true;
+                return;
+            }
+
             juegoTerminado = true;
-            razonFin = "Límite de clientes alcanzado";
+            return;
+        }
+
+        // Verificar tiempo
+        if (tiempoRestante <= 0) {
+            int puntajeFinal = gestorPuntaje.getPuntajeActual();
+
+            if (puntajeFinal < 600) {
+                despedido = true;
+                razonDespido = "Puntaje insuficiente (menos de 600 puntos)";
+            } else if (gestorClientes != null && gestorClientes.cumpleRequisitoMinimo()) {
+                despedido = true;
+                razonDespido = "No atendiste a suficientes clientes (" +
+                    gestorClientes.getClientesAtendidos() + "/" +
+                    gestorClientes.getMinClientesRequeridos() + ")";
+            }
+
+            juegoTerminado = true;
         }
     }
 
     public void finalizarPorDesconexion(String razon) {
         juegoTerminado = true;
-        razonFin = razon;
+        despedido = true;
+        razonDespido = razon;
     }
 
     public void procesarInput(PaqueteInput input) {
@@ -184,21 +305,17 @@ public class LogicaServidor {
         }
     }
 
-    private TipoIngrediente obtenerTipoPorIndice(int indice) {
-        TipoIngrediente[] tipos = TipoIngrediente.values();
-        if (indice >= 0 && indice < tipos.length) {
-            return tipos[indice];
-        }
-        return null;
-    }
-
     public PaqueteEstado generarEstado() {
+        // Datos de jugadores con información de deslizamiento
         DatosJugador datosJ1 = new DatosJugador(
             jugador1.getPosicion().x,
             jugador1.getPosicion().y,
             jugador1.getAnguloRotacion(),
             jugador1.getInventario() != null ? jugador1.getInventario().getNombre() : "vacio",
-            jugador1.estaEnMenu()
+            jugador1.estaEnMenu(),
+            inputsJugadores.get(1).correr, // estaCorriendo
+            jugador1.getPosicion().x, // velocidadX (simplificado)
+            jugador1.getPosicion().y  // velocidadY (simplificado)
         );
 
         DatosJugador datosJ2 = new DatosJugador(
@@ -206,29 +323,36 @@ public class LogicaServidor {
             jugador2.getPosicion().y,
             jugador2.getAnguloRotacion(),
             jugador2.getInventario() != null ? jugador2.getInventario().getNombre() : "vacio",
-            jugador2.estaEnMenu()
+            jugador2.estaEnMenu(),
+            inputsJugadores.get(2).correr,
+            jugador2.getPosicion().x,
+            jugador2.getPosicion().y
         );
 
+        // Datos de clientes
         ArrayList<DatosCliente> datosClientes = new ArrayList<>();
-        for (Cliente cliente : gestorClientes.getClientesActivos()) {
-            ArrayList<String> productos = new ArrayList<>();
-            for (Producto p : cliente.getPedido().getProductosSolicitados()) {
-                productos.add(p.getNombre());
+        if (gestorClientes != null) {
+            for (Cliente cliente : gestorClientes.getClientesActivos()) {
+                ArrayList<String> productos = new ArrayList<>();
+                for (Producto p : cliente.getPedido().getProductosSolicitados()) {
+                    productos.add(p.getNombre());
+                }
+
+                int indexEstacion = estaciones.indexOf(cliente.getEstacionAsignada());
+
+                datosClientes.add(new DatosCliente(
+                    System.identityHashCode(cliente),
+                    cliente.getTiempoRestante(),
+                    cliente.getPorcentajeToleranciaActual(),
+                    cliente.getPedido().getEstadoPedido().toString(),
+                    productos,
+                    cliente.esVirtual(),
+                    indexEstacion
+                ));
             }
-
-            int indexEstacion = estaciones.indexOf(cliente.getEstacionAsignada());
-
-            datosClientes.add(new DatosCliente(
-                System.identityHashCode(cliente),
-                cliente.getTiempoRestante(),
-                cliente.getPorcentajeToleranciaActual(),
-                cliente.getPedido().getEstadoPedido().toString(),
-                productos,
-                cliente.esVirtual(),
-                indexEstacion
-            ));
         }
 
+        // Datos de estaciones
         ArrayList<DatosEstacion> datosEstaciones = new ArrayList<>();
         for (int i = 0; i < estaciones.size(); i++) {
             EstacionTrabajo est = estaciones.get(i);
@@ -239,9 +363,9 @@ public class LogicaServidor {
         return new PaqueteEstado(
             datosJ1, datosJ2, datosClientes, datosEstaciones,
             gestorPuntaje.getPuntajeActual(),
-            (int) tiempoRestante, // Convertir a int aquí
+            (int) tiempoRestante,
             juegoTerminado,
-            razonFin != null ? razonFin : ""
+            despedido ? razonDespido : ""
         );
     }
 
@@ -250,33 +374,117 @@ public class LogicaServidor {
         DatosEstacion datos = new DatosEstacion(index, tipoEstacion);
 
         datos.tieneJugador = (est.getJugadorOcupante() != null);
+        datos.fueraDeServicio = est.isFueraDeServicio();
 
+        // Datos de procesadoras
         if (est.getProcesadora() instanceof Procesadora) {
             Procesadora proc = (Procesadora) est.getProcesadora();
             datos.procesando = proc.tieneProcesandose();
-            datos.estadoIndicador = proc.getIndicador() != null ?
-                proc.getIndicador().getEstado().toString() : "INACTIVO";
-            // Calcular progreso basado en tiempos
+
+            if (proc.getIndicador() != null) {
+                EstadoIndicador estadoIndicador = proc.getEstadoActual();
+                datos.estadoIndicador = estadoIndicador.toString();
+
+                // Determinar estado de máquina para texturas
+                if (estadoIndicador == EstadoIndicador.LISTO) {
+                    datos.estadoMaquina = "LISTA";
+                } else if (estadoIndicador == EstadoIndicador.PROCESANDO || estadoIndicador == EstadoIndicador.QUEMANDOSE) {
+                    datos.estadoMaquina = "ACTIVA";
+                } else {
+                    datos.estadoMaquina = "INACTIVA";
+                }
+            } else {
+                datos.estadoIndicador = "INACTIVO";
+                datos.estadoMaquina = "INACTIVA";
+            }
         }
 
+        // Datos de mesa
         if (est instanceof Mesa) {
             Mesa mesa = (Mesa) est;
-            // Agregar objetos en slots
+            datos.objetosEnEstacion = new ArrayList<>();
+            for (com.hebergames.letmecook.entregables.ObjetoAlmacenable obj : mesa.getObjetosEnMesa()) {
+                if (obj != null) {
+                    datos.objetosEnEstacion.add(obj.getNombre());
+                } else {
+                    datos.objetosEnEstacion.add("vacio");
+                }
+            }
         }
 
+        // Datos de cafetera
         if (est instanceof Cafetera) {
             Cafetera cafetera = (Cafetera) est;
-            datos.estadoMenuBebida = cafetera.getEstadoMenu().toString();
-            // Agregar progreso
+            datos.estadoMenuBebida = cafetera.getEstadoMenu() != null ?
+                cafetera.getEstadoMenu().toString() : "SELECCION_TAMANO";
+            // Agregar progreso si es necesario
         }
 
+        // Datos de fuente
         if (est instanceof Fuente) {
             Fuente fuente = (Fuente) est;
-            datos.estadoMenuBebida = fuente.getEstadoMenu().toString();
+            datos.estadoMenuBebida = fuente.getEstadoMenu() != null ?
+                fuente.getEstadoMenu().toString() : "SELECCION_TAMANO";
         }
 
         return datos;
     }
 
-    public boolean estanJugadoresListos() { return jugador1 != null && jugador2 != null; }
+    public PaqueteInicioPartida generarPaqueteInicio() {
+        ArrayList<String> ordenSucursales = new ArrayList<>();
+        for (NivelPartida nivel : gestorPartida.getTodosLosNiveles()) {
+            ordenSucursales.add(nivel.getMapa().getRutaCompleta() + ";" + nivel.getTurno().toString());
+        }
+
+        return new PaqueteInicioPartida(
+            ordenSucursales
+        );
+    }
+
+    public PaqueteCambioNivel generarPaqueteCambioNivel() {
+        int puntajeActual = gestorPuntaje.getPuntajeActual();
+
+        boolean hayMasNiveles = gestorPartida.avanzarNivel(puntajeActual);
+
+        if (!hayMasNiveles) {
+            return null; // No hay más niveles
+        }
+
+        NivelPartida nuevoNivel = gestorPartida.getNivelActual();
+
+        return new PaqueteCambioNivel(
+            puntajeActual,
+            nuevoNivel.getMapa().getRutaCompleta(),
+            nuevoNivel.getTurno().toString(),
+            gestorPartida.getNivelActualIndex()
+        );
+    }
+
+    public void reiniciarParaNuevoNivel() {
+        // Limpiar recursos del nivel anterior
+        if (gestorMapa != null) {
+            gestorMapa.dispose();
+        }
+
+        // Reinicializar para el nuevo nivel
+        nivelActual = gestorPartida.getNivelActual();
+        tiempoRestante = TIEMPO_OBJETIVO;
+        juegoTerminado = false;
+        despedido = false;
+        razonDespido = "";
+
+        inputsJugadores.get(1).reset();
+        inputsJugadores.get(2).reset();
+
+        inicializarMapa();
+        inicializarJugadores();
+        inicializarSistemaPedidos();
+        inicializarEventosAleatorios();
+
+        detectorInactividad = new DetectorInactividad(jugadores, TIEMPO_LIMITE_INACTIVIDAD);
+    }
+
+    public boolean estanJugadoresListos() {
+        return jugador1 != null && jugador2 != null;
+    }
 }
