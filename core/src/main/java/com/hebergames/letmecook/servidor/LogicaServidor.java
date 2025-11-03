@@ -306,6 +306,12 @@ public class LogicaServidor {
     }
 
     public PaqueteEstado generarEstado() {
+
+        float velXJ1 = inputsJugadores.get(1).arriba || inputsJugadores.get(1).abajo ||
+            inputsJugadores.get(1).izquierda || inputsJugadores.get(1).derecha ? 1f : 0f;
+        float velXJ2 = inputsJugadores.get(2).arriba || inputsJugadores.get(2).abajo ||
+            inputsJugadores.get(2).izquierda || inputsJugadores.get(2).derecha ? 1f : 0f;
+
         // Datos de jugadores con información de deslizamiento
         DatosJugador datosJ1 = new DatosJugador(
             jugador1.getPosicion().x,
@@ -314,8 +320,8 @@ public class LogicaServidor {
             jugador1.getInventario() != null ? jugador1.getInventario().getNombre() : "vacio",
             jugador1.estaEnMenu(),
             inputsJugadores.get(1).correr, // estaCorriendo
-            jugador1.getPosicion().x, // velocidadX (simplificado)
-            jugador1.getPosicion().y  // velocidadY (simplificado)
+            velXJ1, // velocidad real
+            velXJ1  // velocidad rea
         );
 
         DatosJugador datosJ2 = new DatosJugador(
@@ -325,8 +331,8 @@ public class LogicaServidor {
             jugador2.getInventario() != null ? jugador2.getInventario().getNombre() : "vacio",
             jugador2.estaEnMenu(),
             inputsJugadores.get(2).correr,
-            jugador2.getPosicion().x,
-            jugador2.getPosicion().y
+            velXJ1, // velocidad real
+            velXJ1  // velocidad rea
         );
 
         // Datos de clientes
@@ -444,34 +450,44 @@ public class LogicaServidor {
     public PaqueteCambioNivel generarPaqueteCambioNivel() {
         int puntajeActual = gestorPuntaje.getPuntajeActual();
 
-        boolean hayMasNiveles = gestorPartida.avanzarNivel(puntajeActual);
+        // 👇 Verificar si hay siguiente nivel
+        int siguienteIndice = gestorPartida.getNivelActualIndex() + 1;
 
-        if (!hayMasNiveles) {
+        if (siguienteIndice >= gestorPartida.getTodosLosNiveles().size()) {
             return null; // No hay más niveles
         }
 
-        NivelPartida nuevoNivel = gestorPartida.getNivelActual();
+        NivelPartida siguienteNivel = gestorPartida.getTodosLosNiveles().get(siguienteIndice);
 
         return new PaqueteCambioNivel(
             puntajeActual,
-            nuevoNivel.getMapa().getRutaCompleta(),
-            nuevoNivel.getTurno().toString(),
-            gestorPartida.getNivelActualIndex()
+            siguienteNivel.getMapa().getRutaCompleta(),
+            siguienteNivel.getTurno().toString(),
+            siguienteIndice
         );
     }
 
     public void reiniciarParaNuevoNivel() {
+        // 👇 Marcar nivel actual como completado y sumar puntaje
+        int puntajeNivel = gestorPuntaje.getPuntajeActual();
+        gestorPartida.avanzarNivel(puntajeNivel);
+
         // Limpiar recursos del nivel anterior
         if (gestorMapa != null) {
             gestorMapa.dispose();
         }
 
-        // Reinicializar para el nuevo nivel
+        // Obtener nuevo nivel actual
         nivelActual = gestorPartida.getNivelActual();
+
+        // Resetear estado del juego
         tiempoRestante = TIEMPO_OBJETIVO;
         juegoTerminado = false;
         despedido = false;
         razonDespido = "";
+
+        // 👇 Crear nuevo gestor de puntaje para el nuevo nivel
+        gestorPuntaje = new GestorPuntaje();
 
         inputsJugadores.get(1).reset();
         inputsJugadores.get(2).reset();
@@ -482,6 +498,8 @@ public class LogicaServidor {
         inicializarEventosAleatorios();
 
         detectorInactividad = new DetectorInactividad(jugadores, TIEMPO_LIMITE_INACTIVIDAD);
+
+        System.out.println("✅ Servidor listo para nivel " + gestorPartida.getNivelActualIndex());
     }
 
     public boolean estanJugadoresListos() {

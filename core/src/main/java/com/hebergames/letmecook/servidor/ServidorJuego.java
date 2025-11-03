@@ -175,40 +175,60 @@ public class ServidorJuego {
         });
     }
 
+    public void reiniciarServidor() {
+        System.out.println("🔄 Reiniciando servidor para nueva partida...");
+
+        // Limpiar jugadores
+        jugadoresConectados.clear();
+
+        // Limpiar lógica del juego
+        if (logicaJuego != null) {
+            logicaJuego = new LogicaServidor();
+        }
+
+        // Resetear estado
+        ejecutando = true;
+        ultimaActualizacion = 0;
+
+        System.out.println("✅ Servidor reiniciado. Esperando nuevos jugadores...");
+    }
+
     private void enviarEstadoATodos() {
         if (logicaJuego == null || !logicaJuego.estanJugadoresListos()) return;
 
         try {
             PaqueteEstado estado = logicaJuego.generarEstado();
 
-            // ✅ Verificar si el nivel terminó exitosamente
             if (estado.isJuegoTerminado() && !estado.getRazonFin().isEmpty()) {
-                // Es despido, enviar estado normal
+                // Despido - enviar estado y limpiar después
                 for (InfoJugador jugador : jugadoresConectados.values()) {
                     enviarPaquete(estado, jugador.direccion, jugador.puerto);
                 }
+
+                // 👇 Esperar y limpiar
+                Thread.sleep(500);
+                reiniciarServidor();
+
             } else if (estado.isJuegoTerminado()) {
-                // ✅ Nivel completado, intentar cambiar de nivel
                 PaqueteCambioNivel paqueteCambio = logicaJuego.generarPaqueteCambioNivel();
 
                 if (paqueteCambio != null) {
-                    // Hay más niveles, enviar paquete de cambio
                     for (InfoJugador jugador : jugadoresConectados.values()) {
                         enviarPaquete(paqueteCambio, jugador.direccion, jugador.puerto);
                     }
-
-                    // Reiniciar servidor para nuevo nivel
-                    Thread.sleep(100); // Dar tiempo a que lleguen los paquetes
+                    Thread.sleep(100);
                     logicaJuego.reiniciarParaNuevoNivel();
-                    System.out.println("✅ Servidor reiniciado para nuevo nivel");
                 } else {
-                    // No hay más niveles, enviar estado final
+                    // 👇 Partida completada - enviar estado final y limpiar
                     for (InfoJugador jugador : jugadoresConectados.values()) {
                         enviarPaquete(estado, jugador.direccion, jugador.puerto);
                     }
+
+                    Thread.sleep(500);
+                    reiniciarServidor();
                 }
             } else {
-                // Juego en curso, enviar estado normal
+                // Juego en curso
                 for (InfoJugador jugador : jugadoresConectados.values()) {
                     enviarPaquete(estado, jugador.direccion, jugador.puerto);
                 }
