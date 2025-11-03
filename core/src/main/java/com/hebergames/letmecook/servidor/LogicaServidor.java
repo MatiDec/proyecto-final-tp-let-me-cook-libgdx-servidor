@@ -24,7 +24,7 @@ public class LogicaServidor {
     // Configuración del juego
     private final int MIN_CLIENTES_SUCURSAL_CHICA = 10;
     private final int MIN_CLIENTES_SUCURSAL_GRANDE = 20;
-    private final int TIEMPO_OBJETIVO = 200;
+    private final int TIEMPO_OBJETIVO = 10;
     private final float TIEMPO_LIMITE_INACTIVIDAD = 10f;
     private final int CANTIDAD_MAPAS = 7;
 
@@ -451,7 +451,8 @@ public class LogicaServidor {
         int puntajeActual = gestorPuntaje.getPuntajeActual();
 
         // 👇 Verificar si hay siguiente nivel
-        int siguienteIndice = gestorPartida.getNivelActualIndex() + 1;
+        int siguienteIndice = 0;
+        siguienteIndice = gestorPartida.getNivelActualIndex() + 1;
 
         if (siguienteIndice >= gestorPartida.getTodosLosNiveles().size()) {
             return null; // No hay más niveles
@@ -470,7 +471,14 @@ public class LogicaServidor {
     public void reiniciarParaNuevoNivel() {
         // 👇 Marcar nivel actual como completado y sumar puntaje
         int puntajeNivel = gestorPuntaje.getPuntajeActual();
-        gestorPartida.avanzarNivel(puntajeNivel);
+
+        if (gestorPartida.getNivelActualIndex() < gestorPartida.getTodosLosNiveles().size()) {
+            gestorPartida.getTodosLosNiveles().get(gestorPartida.getNivelActualIndex())
+                .marcarCompletado(puntajeNivel);
+            gestorPartida.sumarPuntaje(puntajeNivel);
+        }
+
+        gestorPartida.avanzarIndiceNivel();
 
         // Limpiar recursos del nivel anterior
         if (gestorMapa != null) {

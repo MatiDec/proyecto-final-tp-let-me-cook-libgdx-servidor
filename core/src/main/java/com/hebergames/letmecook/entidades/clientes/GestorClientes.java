@@ -42,7 +42,7 @@ public class GestorClientes {
         this.INTERVALO_SPAWN = intervaloSpawn;
         this.tiempoParaSiguienteCliente = intervaloSpawn;
         this.TURNO_ACTUAL = turno;
-        this.clientesAtendidos = 0;
+        this.clientesAtendidos = 20;
         this.clientesPerdidos = 0;
         this.MIN_CLIENTES_REQUERIDOS = minClientesRequeridos;
         this.MAX_CLIENTES_TOTALES = minClientesRequeridos + 10;
