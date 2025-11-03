@@ -24,7 +24,7 @@ public class LogicaServidor {
     // Configuración del juego
     private final int MIN_CLIENTES_SUCURSAL_CHICA = 10;
     private final int MIN_CLIENTES_SUCURSAL_GRANDE = 20;
-    private final int TIEMPO_OBJETIVO = 10;
+    private final int TIEMPO_OBJETIVO = 2000;
     private final float TIEMPO_LIMITE_INACTIVIDAD = 10f;
     private final int CANTIDAD_MAPAS = 7;
 
@@ -321,13 +321,14 @@ public class LogicaServidor {
     }
 
     public PaqueteEstado generarEstado() {
+        // ✅ OBTENER VELOCIDAD REAL DE LOS JUGADORES (no del input)
+        float velXJ1 = jugador1.getVelocidad().x;
+        float velYJ1 = jugador1.getVelocidad().y;
+        float velXJ2 = jugador2.getVelocidad().x;
+        float velYJ2 = jugador2.getVelocidad().y;
 
-        float velXJ1 = inputsJugadores.get(1).arriba || inputsJugadores.get(1).abajo ||
-            inputsJugadores.get(1).izquierda || inputsJugadores.get(1).derecha ? 1f : 0f;
-        float velXJ2 = inputsJugadores.get(2).arriba || inputsJugadores.get(2).abajo ||
-            inputsJugadores.get(2).izquierda || inputsJugadores.get(2).derecha ? 1f : 0f;
-
-        // Datos de jugadores con información de deslizamiento
+        // Datos de jugadores con velocidades CORRECTAS
+        // ✅ estaMoviendose se calcula automáticamente en el constructor
         DatosJugador datosJ1 = new DatosJugador(
             jugador1.getPosicion().x,
             jugador1.getPosicion().y,
@@ -335,8 +336,9 @@ public class LogicaServidor {
             jugador1.getInventario() != null ? jugador1.getInventario().getNombre() : "vacio",
             jugador1.estaEnMenu(),
             inputsJugadores.get(1).correr, // estaCorriendo
-            velXJ1, // velocidad real
-            velXJ1  // velocidad rea
+            velXJ1, // ✅ velocidad X real
+            velYJ1  // ✅ velocidad Y real
+            // estaMoviendose se calcula solo en el constructor
         );
 
         DatosJugador datosJ2 = new DatosJugador(
@@ -346,8 +348,9 @@ public class LogicaServidor {
             jugador2.getInventario() != null ? jugador2.getInventario().getNombre() : "vacio",
             jugador2.estaEnMenu(),
             inputsJugadores.get(2).correr,
-            velXJ1, // velocidad real
-            velXJ1  // velocidad rea
+            velXJ2, // ✅ velocidad X real
+            velYJ2  // ✅ velocidad Y real
+            // estaMoviendose se calcula solo en el constructor
         );
 
         // Datos de clientes

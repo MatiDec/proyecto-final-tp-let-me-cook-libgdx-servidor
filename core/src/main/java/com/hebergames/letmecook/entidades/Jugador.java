@@ -330,6 +330,25 @@ public class Jugador {
         }
     }
 
+    public Vector2 getVelocidad() {
+        return this.velocidad;
+    }
+
+    public void setMoviendose(boolean moviendose) {
+        // Este método es para el cliente online
+        // En modo local, el movimiento se detecta automáticamente por velocidad
+        if (moviendose && velocidad.isZero(0.01f)) {
+            // Si el servidor dice que está moviéndose pero no hay velocidad local,
+            // esto ayuda a sincronizar la animación
+            estadoTiempo += Gdx.graphics.getDeltaTime();
+        } else if (!moviendose) {
+            // Si no está moviéndose, resetear el tiempo de animación
+            if (velocidad.isZero(0.01f)) {
+                estadoTiempo = 0;
+            }
+        }
+    }
+
     public Rectangle getHITBOX() { return this.HITBOX; }
     public void setInteractuables(ArrayList<Rectangle> rectangulosInteractuables) { this.interactuables = rectangulosInteractuables; }
     public float getAnguloRotacion() { return this.anguloRotacion; }
