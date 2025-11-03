@@ -215,34 +215,42 @@ public class LogicaServidor {
     }
 
     private void verificarFinDeJuego() {
-        // Verificar inactividad
         if (detectorInactividad.haySuperadoLimite()) {
             despedido = true;
             razonDespido = "Despedido por inactividad";
             juegoTerminado = true;
+            System.out.println("❌ Despedido por inactividad");
             return;
         }
 
-        // Verificar límite de clientes
         if (gestorClientes != null && gestorClientes.haAlcanzadoLimiteClientes()) {
             int puntajeFinal = gestorPuntaje.getPuntajeActual();
+
+            System.out.println("🎯 Verificando fin de nivel:");
+            System.out.println("   - Puntaje: " + puntajeFinal);
+            System.out.println("   - Clientes atendidos: " + gestorClientes.getClientesAtendidos());
+            System.out.println("   - Mínimo requerido: " + gestorClientes.getMinClientesRequeridos());
 
             if (puntajeFinal < 600) {
                 despedido = true;
                 razonDespido = "Puntaje insuficiente (menos de 600 puntos)";
                 juegoTerminado = true;
+                System.out.println("❌ Despedido por puntaje bajo");
                 return;
             }
 
-            if (gestorClientes.cumpleRequisitoMinimo()) {
+            // ⚠️ CORRECCIÓN: Invertir la lógica (debería ser NOT cumple)
+            if (!gestorClientes.cumpleRequisitoMinimo()) {
                 despedido = true;
                 razonDespido = "No atendiste a suficientes clientes (" +
                     gestorClientes.getClientesAtendidos() + "/" +
                     gestorClientes.getMinClientesRequeridos() + ")";
                 juegoTerminado = true;
+                System.out.println("❌ Despedido por pocos clientes");
                 return;
             }
 
+            System.out.println("✅ Nivel completado exitosamente");
             juegoTerminado = true;
             return;
         }
@@ -251,14 +259,21 @@ public class LogicaServidor {
         if (tiempoRestante <= 0) {
             int puntajeFinal = gestorPuntaje.getPuntajeActual();
 
+            System.out.println("⏰ Se acabó el tiempo:");
+            System.out.println("   - Puntaje: " + puntajeFinal);
+
             if (puntajeFinal < 600) {
                 despedido = true;
                 razonDespido = "Puntaje insuficiente (menos de 600 puntos)";
-            } else if (gestorClientes != null && gestorClientes.cumpleRequisitoMinimo()) {
+                System.out.println("❌ Despedido por puntaje bajo");
+            } else if (gestorClientes != null && !gestorClientes.cumpleRequisitoMinimo()) {
                 despedido = true;
                 razonDespido = "No atendiste a suficientes clientes (" +
                     gestorClientes.getClientesAtendidos() + "/" +
                     gestorClientes.getMinClientesRequeridos() + ")";
+                System.out.println("❌ Despedido por pocos clientes");
+            } else {
+                System.out.println("✅ Nivel completado por tiempo");
             }
 
             juegoTerminado = true;
@@ -447,14 +462,83 @@ public class LogicaServidor {
         );
     }
 
+
+    public void reiniciarParaNuevoNivel() {
+        // 👇 Obtener índice actual ANTES de avanzar
+        int indiceLevelCompletado = gestorPartida.getNivelActualIndex();
+        int puntajeNivel = gestorPuntaje.getPuntajeActual();
+
+        System.out.println("🔄 Completando nivel " + indiceLevelCompletado + " con " + puntajeNivel + " puntos");
+
+        // Marcar nivel como completado y sumar puntaje
+        if (indiceLevelCompletado < gestorPartida.getTodosLosNiveles().size()) {
+            gestorPartida.getTodosLosNiveles().get(indiceLevelCompletado)
+                .marcarCompletado(puntajeNivel);
+            gestorPartida.sumarPuntaje(puntajeNivel);
+        }
+
+        // Avanzar al siguiente nivel
+        gestorPartida.avanzarIndiceNivel();
+
+        int nuevoIndice = gestorPartida.getNivelActualIndex();
+        System.out.println("📍 Avanzando a nivel " + nuevoIndice);
+
+        // Verificar si hay siguiente nivel
+        if (nuevoIndice >= gestorPartida.getTodosLosNiveles().size()) {
+            System.out.println("⚠️ No hay más niveles disponibles");
+            juegoTerminado = true;
+            return;
+        }
+
+        // Limpiar recursos del nivel anterior
+        if (gestorMapa != null) {
+            gestorMapa.dispose();
+        }
+
+        // Obtener nuevo nivel actual
+        nivelActual = gestorPartida.getNivelActual();
+
+        if (nivelActual == null) {
+            System.out.println("❌ Error: nivel actual es null");
+            juegoTerminado = true;
+            return;
+        }
+
+        System.out.println("✅ Inicializando nivel: " + nivelActual.getMapa().getNombre());
+
+        // Resetear estado del juego
+        tiempoRestante = TIEMPO_OBJETIVO;
+        juegoTerminado = false;
+        despedido = false;
+        razonDespido = "";
+
+        // Crear nuevo gestor de puntaje para el nuevo nivel
+        gestorPuntaje = new GestorPuntaje();
+
+        inputsJugadores.get(1).reset();
+        inputsJugadores.get(2).reset();
+
+        // Re-inicializar todo para el nuevo nivel
+        inicializarMapa();
+        inicializarJugadores();
+        inicializarSistemaPedidos();
+        inicializarEventosAleatorios();
+
+        detectorInactividad = new DetectorInactividad(jugadores, TIEMPO_LIMITE_INACTIVIDAD);
+
+        System.out.println("✅ Servidor listo para nivel " + gestorPartida.getNivelActualIndex());
+    }
+
     public PaqueteCambioNivel generarPaqueteCambioNivel() {
         int puntajeActual = gestorPuntaje.getPuntajeActual();
+        int siguienteIndice = gestorPartida.getNivelActualIndex() + 1;
 
-        // 👇 Verificar si hay siguiente nivel
-        int siguienteIndice = 0;
-        siguienteIndice = gestorPartida.getNivelActualIndex() + 1;
+        System.out.println("📦 Generando paquete cambio nivel. Actual: " +
+            gestorPartida.getNivelActualIndex() + ", Siguiente: " + siguienteIndice);
 
+        // Verificar si hay siguiente nivel
         if (siguienteIndice >= gestorPartida.getTodosLosNiveles().size()) {
+            System.out.println("🏁 No hay más niveles - fin de partida");
             return null; // No hay más niveles
         }
 
@@ -466,48 +550,6 @@ public class LogicaServidor {
             siguienteNivel.getTurno().toString(),
             siguienteIndice
         );
-    }
-
-    public void reiniciarParaNuevoNivel() {
-        // 👇 Marcar nivel actual como completado y sumar puntaje
-        int puntajeNivel = gestorPuntaje.getPuntajeActual();
-
-        if (gestorPartida.getNivelActualIndex() < gestorPartida.getTodosLosNiveles().size()) {
-            gestorPartida.getTodosLosNiveles().get(gestorPartida.getNivelActualIndex())
-                .marcarCompletado(puntajeNivel);
-            gestorPartida.sumarPuntaje(puntajeNivel);
-        }
-
-        gestorPartida.avanzarIndiceNivel();
-
-        // Limpiar recursos del nivel anterior
-        if (gestorMapa != null) {
-            gestorMapa.dispose();
-        }
-
-        // Obtener nuevo nivel actual
-        nivelActual = gestorPartida.getNivelActual();
-
-        // Resetear estado del juego
-        tiempoRestante = TIEMPO_OBJETIVO;
-        juegoTerminado = false;
-        despedido = false;
-        razonDespido = "";
-
-        // 👇 Crear nuevo gestor de puntaje para el nuevo nivel
-        gestorPuntaje = new GestorPuntaje();
-
-        inputsJugadores.get(1).reset();
-        inputsJugadores.get(2).reset();
-
-        inicializarMapa();
-        inicializarJugadores();
-        inicializarSistemaPedidos();
-        inicializarEventosAleatorios();
-
-        detectorInactividad = new DetectorInactividad(jugadores, TIEMPO_LIMITE_INACTIVIDAD);
-
-        System.out.println("✅ Servidor listo para nivel " + gestorPartida.getNivelActualIndex());
     }
 
     public boolean estanJugadoresListos() {

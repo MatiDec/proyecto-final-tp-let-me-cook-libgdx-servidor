@@ -5,7 +5,7 @@ public class GestorPuntaje implements CallbackPuntaje {
     private int puntajeActual;
 
     public GestorPuntaje() {
-        this.puntajeActual = 690;
+        this.puntajeActual = 0;
     }
 
     @Override

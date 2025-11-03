@@ -42,10 +42,10 @@ public class GestorClientes {
         this.INTERVALO_SPAWN = intervaloSpawn;
         this.tiempoParaSiguienteCliente = intervaloSpawn;
         this.TURNO_ACTUAL = turno;
-        this.clientesAtendidos = 20;
+        this.clientesAtendidos = 0;
         this.clientesPerdidos = 0;
         this.MIN_CLIENTES_REQUERIDOS = minClientesRequeridos;
-        this.MAX_CLIENTES_TOTALES = minClientesRequeridos + 10;
+        this.MAX_CLIENTES_TOTALES = minClientesRequeridos;
     }
 
     public void setCallbackPenalizacion(CallbackPenalizacion callback) {
@@ -200,14 +200,8 @@ public class GestorClientes {
     }
 
     public void removerCliente(Cliente cliente) {
-        if (CLIENTES_ACTIVOS.contains(cliente)) {
-            if (cliente.getPedido().getEstadoPedido() == EstadoPedido.COMPLETADO) {
-                clientesAtendidos++;
-            }
-
-            CLIENTES_ACTIVOS.remove(cliente);
-            liberarEstacion(cliente);
-        }
+        CLIENTES_ACTIVOS.remove(cliente);
+        liberarEstacion(cliente);
     }
 
     public ArrayList<Cliente> getClientesActivos() {
