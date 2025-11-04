@@ -162,7 +162,9 @@ public class LogicaServidor {
         for (EstacionTrabajo estacion : estaciones) {
             if (!(estacion instanceof CajaRegistradora) &&
                 !(estacion instanceof MesaRetiro) &&
-                !(estacion instanceof CajaVirtual)) {
+                !(estacion instanceof CajaVirtual) &&
+                !(estacion instanceof Basurero) &&
+                !(estacion instanceof Heladera)){
                 gestorEventos.registrarEventoPosible(new EventoMaquinaRota(estacion));
             }
         }
