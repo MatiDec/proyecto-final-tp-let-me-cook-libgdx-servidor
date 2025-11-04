@@ -187,6 +187,11 @@ public class LogicaServidor {
     public void actualizar(float delta) {
         if (juegoTerminado) return;
 
+        if (jugador1 == null || jugador2 == null) {
+            System.err.println("⚠️ Jugadores no inicializados, saltando actualización");
+            return;
+        }
+
         // Actualizar jugadores
         jugador1.manejarEntrada(inputsJugadores.get(1));
         jugador2.manejarEntrada(inputsJugadores.get(2));
@@ -405,6 +410,10 @@ public class LogicaServidor {
             Procesadora proc = (Procesadora) est.getProcesadora();
             datos.procesando = proc.tieneProcesandose();
 
+            if (proc.tieneProcesandose()) {
+                datos.nombreIngrediente = "procesando"; // O el nombre real del ingrediente si lo tienes
+            }
+
             if (proc.getIndicador() != null) {
                 EstadoIndicador estadoIndicador = proc.getEstadoActual();
                 datos.estadoIndicador = estadoIndicador.toString();
@@ -412,10 +421,15 @@ public class LogicaServidor {
                 // Determinar estado de máquina para texturas
                 if (estadoIndicador == EstadoIndicador.LISTO) {
                     datos.estadoMaquina = "LISTA";
-                } else if (estadoIndicador == EstadoIndicador.PROCESANDO || estadoIndicador == EstadoIndicador.QUEMANDOSE) {
+                    datos.estadoIndicador = "LISTO";
+                } else if (estadoIndicador == EstadoIndicador.PROCESANDO) {
                     datos.estadoMaquina = "ACTIVA";
+                    datos.estadoIndicador = "PROCESANDO";
+                } else if (estadoIndicador == EstadoIndicador.QUEMANDOSE) {
+                     datos.estadoIndicador = "QUEMANDOSE";
                 } else {
                     datos.estadoMaquina = "INACTIVA";
+                    datos.estadoIndicador = "INACTIVO";
                 }
             } else {
                 datos.estadoIndicador = "INACTIVO";
@@ -556,6 +570,6 @@ public class LogicaServidor {
     }
 
     public boolean estanJugadoresListos() {
-        return jugador1 != null && jugador2 != null;
+        return jugador1 != null && jugador2 != null && !juegoTerminado;
     }
 }
