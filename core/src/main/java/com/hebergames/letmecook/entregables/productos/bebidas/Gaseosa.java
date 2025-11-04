@@ -11,17 +11,17 @@ public class Gaseosa extends Bebida {
     private static final Map<String, Float> TIPOS_GASEOSA = new HashMap<>();
 
     static {
-        TIPOS_GASEOSA.put("Jugo", 2f);
-        TIPOS_GASEOSA.put("Soda", 2f);
-        TIPOS_GASEOSA.put("Sprite", 2f);
-        TIPOS_GASEOSA.put("Pepsi", 2f);
-        TIPOS_GASEOSA.put("CocaCola", 2f);
+        TIPOS_GASEOSA.put("jugo", 2f);
+        TIPOS_GASEOSA.put("soda", 2f);
+        TIPOS_GASEOSA.put("sprite", 2f);
+        TIPOS_GASEOSA.put("pepsi", 2f);
+        TIPOS_GASEOSA.put("cocaCola", 2f);
     }
 
     private final String TIPO;
 
     public Gaseosa(final String TIPO, TamanoBebida tamano) {
-        super(TIPO + " " + tamano.getNombre(),
+        super(TIPO + tamano.getNombre(),
             GestorTexturas.getInstance().getTexturaProducto((TIPO + tamano.getNombre()).toLowerCase().replace(" ", "")),
             CategoriaProducto.BEBIDAS,
             tamano,
