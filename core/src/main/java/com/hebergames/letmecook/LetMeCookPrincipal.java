@@ -16,7 +16,6 @@ public class LetMeCookPrincipal extends Game {
         this.servidorJuego = new ServidorJuego();
         this.servidorJuego.iniciar();
 
-        // Agregar hook para cerrar correctamente cuando se cierra la aplicación
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutdown hook activado");
             if (servidorJuego != null) {

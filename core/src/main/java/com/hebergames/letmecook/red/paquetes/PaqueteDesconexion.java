@@ -3,19 +3,18 @@ package com.hebergames.letmecook.red.paquetes;
 import com.hebergames.letmecook.red.PaqueteRed;
 
 public class PaqueteDesconexion extends PaqueteRed {
-    private int idJugador;
-    private String razon;
+    private final int ID_JUGADOR;
+    private final String RAZON;
 
-    public PaqueteDesconexion(int idJugador, String razon) {
-        this.idJugador = idJugador;
-        this.razon = razon;
+    public PaqueteDesconexion(int ID_JUGADOR, String RAZON) {
+        this.ID_JUGADOR = ID_JUGADOR;
+        this.RAZON = RAZON;
     }
 
     @Override
-    public PaqueteRed.TipoPaquete getTipo() {
+    public TipoPaquete getTipo() {
         return TipoPaquete.DESCONEXION;
     }
 
-    public int getIdJugador() { return idJugador; }
-    public String getRazon() { return razon; }
+    public String getRazon() { return this.RAZON; }
 }

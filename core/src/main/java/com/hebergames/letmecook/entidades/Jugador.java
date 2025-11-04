@@ -59,7 +59,6 @@ public class Jugador {
         this.velocidad = new Vector2(0, 0);
         this.gestorAnimacion = gestorAnimacion;
 
-        // Hacer animación opcional (para servidor)
         if (gestorAnimacion != null) {
             this.animacion = gestorAnimacion.getAnimacionPorObjeto(objetoEnMano);
         }
@@ -323,7 +322,7 @@ public class Jugador {
     public void setObjetoEnMano(String nombreObjeto) {
         if (!nombreObjeto.equalsIgnoreCase(this.objetoEnMano)) {
             this.objetoEnMano = nombreObjeto;
-            if (gestorAnimacion != null) { // Verificar null
+            if (gestorAnimacion != null) {
                 this.animacion = gestorAnimacion.getAnimacionPorObjeto(nombreObjeto);
                 this.estadoTiempo = 0;
             }
@@ -335,14 +334,9 @@ public class Jugador {
     }
 
     public void setMoviendose(boolean moviendose) {
-        // Este método es para el cliente online
-        // En modo local, el movimiento se detecta automáticamente por velocidad
         if (moviendose && velocidad.isZero(0.01f)) {
-            // Si el servidor dice que está moviéndose pero no hay velocidad local,
-            // esto ayuda a sincronizar la animación
             estadoTiempo += Gdx.graphics.getDeltaTime();
         } else if (!moviendose) {
-            // Si no está moviéndose, resetear el tiempo de animación
             if (velocidad.isZero(0.01f)) {
                 estadoTiempo = 0;
             }

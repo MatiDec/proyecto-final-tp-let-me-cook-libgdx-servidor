@@ -55,8 +55,6 @@ public class PantallaTutorial extends Pantalla {
 
     private void inicializarTutoriales() {
         elementosTutorial = new ArrayList<>();
-
-        // Formato: (título, miniatura, spritesheet, frameWidth, frameHeight, cantidadFrames, fps)
         elementosTutorial.add(new ElementoTutorial(
             "Controles Básicos",
             "core/src/main/java/com/hebergames/letmecook/recursos/imagenes/tutoriales/miniatura_controles.jpg",

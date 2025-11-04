@@ -9,10 +9,6 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.hebergames.letmecook.pantallas.juego.ObjetoVisualizable;
 import com.hebergames.letmecook.utiles.Render;
 
-/**
- * Clase Texto adaptable a cliente y servidor.
- * En servidor (Gdx no inicializado) no carga fuentes, solo mantiene lógica de texto y posición.
- */
 public class Texto implements ObjetoVisualizable {
 
     private final BitmapFont FUENTE;
@@ -20,17 +16,8 @@ public class Texto implements ObjetoVisualizable {
     private String texto = "";
     private final GlyphLayout LAYOUT;
 
-    /**
-     * Constructor de Texto.
-     *
-     * @param RUTA_FUENTE Ruta del archivo de fuente (solo se usa si Gdx está inicializado)
-     * @param DIMENSION Tamaño de la fuente
-     * @param COLOR Color de la fuente
-     * @param SOMBRA Si debe tener sombra
-     */
     public Texto(final String RUTA_FUENTE, final int DIMENSION, final Color COLOR, final boolean SOMBRA) {
         if (Gdx.app != null) {
-            // Cliente: se inicializa la fuente
             FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(RUTA_FUENTE));
             FreeTypeFontGenerator.FreeTypeFontParameter parametro = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
@@ -45,16 +32,12 @@ public class Texto implements ObjetoVisualizable {
             FUENTE = generator.generateFont(parametro);
             generator.dispose();
         } else {
-            // Servidor: no se carga la fuente, solo dummy para evitar NPE
             FUENTE = null;
         }
 
         LAYOUT = new GlyphLayout();
     }
 
-    /**
-     * Verifica si se hizo clic en el texto
-     */
     public boolean fueClickeado(float x, float y) {
         float ancho = getAncho();
         float alto = getAlto();
@@ -63,18 +46,12 @@ public class Texto implements ObjetoVisualizable {
         return x >= this.x && x <= this.x + ancho && y >= yInferior && y <= this.y;
     }
 
-    /**
-     * Dibuja el texto usando Render.batch (solo si FUENTE existe)
-     */
     public void dibujar() {
         if (FUENTE != null) {
             FUENTE.draw(Render.batch, this.texto, this.x, this.y);
         }
     }
 
-    /**
-     * Dibuja el texto en un batch específico (UI)
-     */
     @Override
     public void dibujarEnUi(SpriteBatch batch) {
         if (FUENTE != null) {
@@ -82,9 +59,6 @@ public class Texto implements ObjetoVisualizable {
         }
     }
 
-    /**
-     * Cambia el texto mostrado
-     */
     public void setTexto(String nuevoTexto) {
         if (!this.texto.equals(nuevoTexto)) {
             this.texto = nuevoTexto;

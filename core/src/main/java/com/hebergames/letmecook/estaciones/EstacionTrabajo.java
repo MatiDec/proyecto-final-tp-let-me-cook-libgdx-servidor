@@ -153,12 +153,10 @@ public abstract class EstacionTrabajo {
         }
     }
 
-    public void dibujarIndicador(SpriteBatch batch) {
-        if (batch == null) return; // Servidor
-    }
+    public void dibujarIndicador(SpriteBatch batch) {if (batch == null) return;}
 
     public void dibujarIndicadorError(SpriteBatch batch) {
-        if (batch == null) return; // Servidor
+        if (batch == null) return;
         if (fueraDeServicio) {
             float x = area.x + area.width / 2 - 16;
             float y = area.y + area.height + 10;
@@ -167,10 +165,10 @@ public abstract class EstacionTrabajo {
     }
 
     public void dibujarEstado(SpriteBatch batch) {
-        if (batch == null) return; // Servidor
+        if (batch == null) return;
     }
     public void dibujar(SpriteBatch batch, Jugador jugador) {
-        if (batch == null) return; // Servidor
+        if (batch == null) return;
     }
 
     public Jugador getJugadorOcupante() {

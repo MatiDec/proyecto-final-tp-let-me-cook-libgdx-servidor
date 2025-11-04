@@ -101,7 +101,7 @@ public class Fuente extends EstacionConMenu {
 
     @Override
     protected void dibujarMenu(SpriteBatch batch, Jugador jugador) {
-        if (batch == null) return; // Servidor
+        if (batch == null) return;
         float menuX = 100f;
         float menuY = 400f;
 

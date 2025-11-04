@@ -99,7 +99,7 @@ public class Mapa {
     }
 
     public void render(OrthographicCamera camara) {
-        if (RENDERER == null) return; // Servidor
+        if (RENDERER == null) return;
         RENDERER.setView(camara);
         RENDERER.render();
     }

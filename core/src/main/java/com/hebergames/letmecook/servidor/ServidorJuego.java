@@ -24,7 +24,7 @@ public class ServidorJuego {
     private Thread hiloActualizacion;
     private volatile boolean ejecutando = false;
     private long ultimaActualizacion = 0;
-    private static final long INTERVALO_TICK = 1000 / TICK_RATE; // ~33ms para 30 TPS
+    private static final long INTERVALO_TICK = 1000 / TICK_RATE;
 
     public ServidorJuego() {
         jugadoresConectados = new ConcurrentHashMap<>();
@@ -42,7 +42,6 @@ public class ServidorJuego {
             hiloReceptor = new HiloReceptorPaquetes(this, socket);
             new Thread(hiloReceptor, "HiloReceptorPaquetes").start();
 
-            // Hilo de actualización del juego
             hiloActualizacion = new Thread(this::loopActualizacion, "HiloActualizacionServidor");
             hiloActualizacion.start();
 
@@ -59,20 +58,17 @@ public class ServidorJuego {
                 final float delta = (ahora - ultimaActualizacion) / 1000f;
                 ultimaActualizacion = ahora;
 
-                // 🔍 Verificar desconexión durante el juego (SOLO UNA VEZ)
                 if (logicaJuego != null && jugadoresConectados.size() < MAX_JUGADORES) {
                     System.out.println("⚠️ Jugador desconectado durante el juego");
 
-                    // 🔒 Prevenir detecciones múltiples
                     final LogicaServidor logicaTemporal = logicaJuego;
-                    logicaJuego = null; // Detener actualizaciones inmediatamente
+                    logicaJuego = null;
 
                     Gdx.app.postRunnable(() -> {
                         if (logicaTemporal != null) {
                             logicaTemporal.finalizarPorDesconexion("Un jugador abandonó la partida");
                         }
 
-                        // Enviar notificación al jugador restante
                         PaqueteDesconexion paqueteDesc = new PaqueteDesconexion(0, "JUGADOR_ABANDONO");
                         for (InfoJugador jugador : jugadoresConectados.values()) {
                             try {
@@ -92,14 +88,12 @@ public class ServidorJuego {
 
                         reiniciarServidor();
                     });
-                    continue; // Saltar esta iteración
+                    continue;
                 }
 
-                // Actualizar lógica del juego SOLO si todo está OK
                 if (logicaJuego != null && jugadoresConectados.size() == MAX_JUGADORES) {
                     Gdx.app.postRunnable(() -> {
                         try {
-                            // 🔒 Verificar nuevamente por seguridad
                             if (logicaJuego != null) {
                                 logicaJuego.actualizar(delta);
                                 enviarEstadoATodos();
@@ -141,7 +135,6 @@ public class ServidorJuego {
                 break;
 
             case DESCONEXION:
-                // 🔥 CRÍTICO: Manejar desconexión inmediatamente
                 PaqueteDesconexion paqueteDesc = (PaqueteDesconexion) paquete;
                 Gdx.app.postRunnable(() -> manejarDesconexionVoluntaria(direccion, puerto, paqueteDesc));
                 break;
@@ -169,27 +162,21 @@ public class ServidorJuego {
 
         if (jugadorDesconectado != null) {
             System.out.println("👋 Jugador " + jugadorDesconectado.id + " se desconectó voluntariamente");
-
-            // 🔥 Si hay un juego en curso, finalizarlo
             if (logicaJuego != null) {
-                // Anular lógica para detener actualizaciones
                 final LogicaServidor logicaTemporal = logicaJuego;
                 logicaJuego = null;
 
                 if (logicaTemporal != null) {
                     logicaTemporal.finalizarPorDesconexion("Jugador " + jugadorDesconectado.id + " abandonó la partida");
                 }
-
-                // 🎯 PRIMERO notificar al otro jugador MÚLTIPLES VECES
                 PaqueteDesconexion notificacion = new PaqueteDesconexion(0, "JUGADOR_ABANDONO");
                 for (InfoJugador otroJugador : jugadoresConectados.values()) {
                     if (otroJugador.id != jugadorDesconectado.id) {
                         System.out.println("📤 Notificando a Jugador " + otroJugador.id + " sobre desconexión");
                         try {
-                            // Enviar 5 veces con intervalos para garantizar recepción UDP
                             for (int i = 0; i < 5; i++) {
                                 enviarPaquete(notificacion, otroJugador.direccion, otroJugador.puerto);
-                                Thread.sleep(100); // 100ms entre cada envío
+                                Thread.sleep(100);
                             }
                         } catch (Exception e) {
                             System.err.println("Error notificando desconexión: " + e.getMessage());
@@ -197,21 +184,17 @@ public class ServidorJuego {
                     }
                 }
 
-                // 🕐 Esperar más tiempo para que los paquetes lleguen
                 try {
                     System.out.println("⏳ Esperando confirmación de recepción...");
-                    Thread.sleep(1000); // Aumentar a 1 segundo
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
-                // 🔥 DESPUÉS remover al jugador desconectado
                 jugadoresConectados.remove(key);
 
-                // 🔄 FINALMENTE reiniciar servidor
                 reiniciarServidor();
             } else {
-                // Si no hay juego en curso, simplemente remover
                 jugadoresConectados.remove(key);
             }
         }
@@ -254,8 +237,6 @@ public class ServidorJuego {
                 logicaJuego.inicializar();
                 ultimaActualizacion = System.currentTimeMillis();
                 System.out.println("Juego inicializado correctamente.");
-
-                // 👇 NUEVO - Enviar configuración de la partida a ambos clientes
                 PaqueteInicioPartida paqueteInicio = logicaJuego.generarPaqueteInicio();
                 for (InfoJugador jugador : jugadoresConectados.values()) {
                     enviarPaquete(paqueteInicio, jugador.direccion, jugador.puerto);
@@ -272,20 +253,11 @@ public class ServidorJuego {
 
     public void reiniciarServidor() {
         System.out.println("🔄 Reiniciando servidor para nueva partida...");
-
-        // 🔒 CRÍTICO: Detener actualizaciones primero
         LogicaServidor logicaTemporal = logicaJuego;
-        logicaJuego = null; // ⚠️ Esto detiene el loop de actualización
-
-        // Limpiar jugadores
         jugadoresConectados.clear();
-
-        // Resetear lógica del juego
         if (logicaTemporal != null) {
 
         }
-
-        // Resetear estado
         ultimaActualizacion = 0;
 
         System.out.println("✅ Servidor reiniciado. Esperando nuevos jugadores...");
@@ -298,7 +270,6 @@ public class ServidorJuego {
             PaqueteEstado estado = logicaJuego.generarEstado();
 
             if (estado.isJuegoTerminado() && !estado.getRazonFin().isEmpty()) {
-                // Despido - enviar estado y desconectar clientes
                 for (InfoJugador jugador : jugadoresConectados.values()) {
                     enviarPaquete(estado, jugador.direccion, jugador.puerto);
                 }
@@ -311,14 +282,12 @@ public class ServidorJuego {
                 PaqueteCambioNivel paqueteCambio = logicaJuego.generarPaqueteCambioNivel();
 
                 if (paqueteCambio != null) {
-                    // Hay siguiente nivel
                     for (InfoJugador jugador : jugadoresConectados.values()) {
                         enviarPaquete(paqueteCambio, jugador.direccion, jugador.puerto);
                     }
                     Thread.sleep(100);
                     logicaJuego.reiniciarParaNuevoNivel();
                 } else {
-                    // Partida completada - enviar estado final y desconectar
                     for (InfoJugador jugador : jugadoresConectados.values()) {
                         enviarPaquete(estado, jugador.direccion, jugador.puerto);
                     }
@@ -328,7 +297,6 @@ public class ServidorJuego {
                     reiniciarServidor();
                 }
             } else {
-                // Juego en curso
                 for (InfoJugador jugador : jugadoresConectados.values()) {
                     enviarPaquete(estado, jugador.direccion, jugador.puerto);
                 }
@@ -346,7 +314,6 @@ public class ServidorJuego {
 
         for (InfoJugador jugador : jugadoresConectados.values()) {
             try {
-                // Enviar múltiples veces para asegurar recepción
                 enviarPaquete(paqueteDesc, jugador.direccion, jugador.puerto);
                 Thread.sleep(50);
                 enviarPaquete(paqueteDesc, jugador.direccion, jugador.puerto);

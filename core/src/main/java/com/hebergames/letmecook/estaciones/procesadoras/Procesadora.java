@@ -114,7 +114,7 @@ public class Procesadora implements MaquinaProcesadora, CoccionListener {
     }
 
     public void dibujarEstado(SpriteBatch batch) {
-        if (batch == null || texturasMaquina == null) return; // Servidor
+        if (batch == null || texturasMaquina == null) return;
         if (!procesando && (ingredienteCocinando == null)) return;
 
         TextureRegion overlay = null;

@@ -33,7 +33,7 @@ public class GestorMapa {
     }
 
     public void renderizar(OrthographicCamera camara) {
-        if (modoServidor || mapaActual == null) return; // No renderizar en servidor
+        if (modoServidor || mapaActual == null) return;
         mapaActual.render(camara);
     }
 
@@ -45,7 +45,7 @@ public class GestorMapa {
     }
 
     public void dibujarIndicadores(SpriteBatch batch) {
-        if (modoServidor) return; // No dibujar en servidor
+        if (modoServidor) return;
         GestorEventosAleatorios gestorEventos = GestorEventosAleatorios.getInstancia();
         EventoPisoMojado eventoPiso = gestorEventos.getEventoPisoMojado();
         if (eventoPiso != null) {

@@ -21,19 +21,15 @@ import com.hebergames.letmecook.red.paquetes.*;
 import java.util.*;
 
 public class LogicaServidor {
-    // Configuración del juego
     private final int MIN_CLIENTES_SUCURSAL_CHICA = 10;
     private final int MIN_CLIENTES_SUCURSAL_GRANDE = 20;
-    private final int TIEMPO_OBJETIVO = 2000;
+    private final int TIEMPO_OBJETIVO = 20;
     private final float TIEMPO_LIMITE_INACTIVIDAD = 10f;
     private final int CANTIDAD_MAPAS = 7;
-
-    // Entidades principales
     private Jugador jugador1;
     private Jugador jugador2;
     private ArrayList<Jugador> jugadores;
 
-    // Gestores del juego
     private GestorMapa gestorMapa;
     private GestorClientes gestorClientes;
     private GestorPedidos gestorPedidos;
@@ -41,7 +37,6 @@ public class LogicaServidor {
     private GestorPartida gestorPartida;
     private DetectorInactividad detectorInactividad;
 
-    // Estado del juego
     private ArrayList<EstacionTrabajo> estaciones;
     private Map<Integer, DatosEntrada> inputsJugadores;
     private float tiempoRestante;
@@ -49,7 +44,6 @@ public class LogicaServidor {
     private String razonDespido;
     private boolean despedido;
 
-    // Nivel actual
     private NivelPartida nivelActual;
 
     public LogicaServidor() {
@@ -67,7 +61,6 @@ public class LogicaServidor {
         gestorPartida = GestorPartida.getInstancia();
         gestorPuntaje = new GestorPuntaje();
 
-        // Generar partida en modo servidor
         if (gestorPartida.getNivelActual() == null) {
             ArrayList<String> rutasMapas = new ArrayList<>();
             for (int i = 1; i <= CANTIDAD_MAPAS; i++) {
@@ -102,7 +95,7 @@ public class LogicaServidor {
         float posXJ2 = (spawnJ2 != null) ? spawnJ2.x + (spawnJ2.width / 2f) - 64 : 1000;
         float posYJ2 = (spawnJ2 != null) ? spawnJ2.y + (spawnJ2.height / 2f) - 64 : 872;
 
-        jugador1 = new Jugador(posXJ1, posYJ1, null); // null para servidor (sin animación)
+        jugador1 = new Jugador(posXJ1, posYJ1, null);
         jugador2 = new Jugador(posXJ2, posYJ2, null);
 
         gestorMapa.asignarColisionesYInteracciones(jugador1);
@@ -194,14 +187,12 @@ public class LogicaServidor {
             return;
         }
 
-        // Actualizar jugadores
         jugador1.manejarEntrada(inputsJugadores.get(1));
         jugador2.manejarEntrada(inputsJugadores.get(2));
 
         jugador1.actualizar(delta);
         jugador2.actualizar(delta);
 
-        // Actualizar clientes y estaciones
         if (gestorClientes != null) {
             gestorClientes.actualizar(delta);
         }
@@ -211,13 +202,8 @@ public class LogicaServidor {
             estacion.verificarDistanciaYLiberar();
         }
 
-        // Actualizar detector de inactividad
         detectorInactividad.actualizar(delta);
-
-        // Decrementar tiempo
         tiempoRestante -= delta;
-
-        // Verificar fin de juego
         verificarFinDeJuego();
     }
 
@@ -246,7 +232,6 @@ public class LogicaServidor {
                 return;
             }
 
-            // ⚠️ CORRECCIÓN: Invertir la lógica (debería ser NOT cumple)
             if (!gestorClientes.cumpleRequisitoMinimo()) {
                 despedido = true;
                 razonDespido = "No atendiste a suficientes clientes (" +
@@ -262,7 +247,6 @@ public class LogicaServidor {
             return;
         }
 
-        // Verificar tiempo
         if (tiempoRestante <= 0) {
             int puntajeFinal = gestorPuntaje.getPuntajeActual();
 
@@ -328,24 +312,20 @@ public class LogicaServidor {
     }
 
     public PaqueteEstado generarEstado() {
-        // ✅ OBTENER VELOCIDAD REAL DE LOS JUGADORES (no del input)
         float velXJ1 = jugador1.getVelocidad().x;
         float velYJ1 = jugador1.getVelocidad().y;
         float velXJ2 = jugador2.getVelocidad().x;
         float velYJ2 = jugador2.getVelocidad().y;
 
-        // Datos de jugadores con velocidades CORRECTAS
-        // ✅ estaMoviendose se calcula automáticamente en el constructor
         DatosJugador datosJ1 = new DatosJugador(
             jugador1.getPosicion().x,
             jugador1.getPosicion().y,
             jugador1.getAnguloRotacion(),
             jugador1.getInventario() != null ? jugador1.getInventario().getNombre() : "vacio",
             jugador1.estaEnMenu(),
-            inputsJugadores.get(1).correr, // estaCorriendo
-            velXJ1, // ✅ velocidad X real
-            velYJ1  // ✅ velocidad Y real
-            // estaMoviendose se calcula solo en el constructor
+            inputsJugadores.get(1).correr,
+            velXJ1,
+            velYJ1
         );
 
         DatosJugador datosJ2 = new DatosJugador(
@@ -355,12 +335,10 @@ public class LogicaServidor {
             jugador2.getInventario() != null ? jugador2.getInventario().getNombre() : "vacio",
             jugador2.estaEnMenu(),
             inputsJugadores.get(2).correr,
-            velXJ2, // ✅ velocidad X real
-            velYJ2  // ✅ velocidad Y real
-            // estaMoviendose se calcula solo en el constructor
+            velXJ2,
+            velYJ2
         );
 
-        // Datos de clientes
         ArrayList<DatosCliente> datosClientes = new ArrayList<>();
         if (gestorClientes != null) {
             for (Cliente cliente : gestorClientes.getClientesActivos()) {
@@ -383,7 +361,6 @@ public class LogicaServidor {
             }
         }
 
-        // Datos de estaciones
         ArrayList<DatosEstacion> datosEstaciones = new ArrayList<>();
         for (int i = 0; i < estaciones.size(); i++) {
             EstacionTrabajo est = estaciones.get(i);
@@ -407,20 +384,18 @@ public class LogicaServidor {
         datos.tieneJugador = (est.getJugadorOcupante() != null);
         datos.fueraDeServicio = est.isFueraDeServicio();
 
-        // Datos de procesadoras
         if (est.getProcesadora() instanceof Procesadora) {
             Procesadora proc = (Procesadora) est.getProcesadora();
             datos.procesando = proc.tieneProcesandose();
 
             if (proc.tieneProcesandose()) {
-                datos.nombreIngrediente = "procesando"; // O el nombre real del ingrediente si lo tienes
+                datos.nombreIngrediente = "procesando";
             }
 
             if (proc.getIndicador() != null) {
                 EstadoIndicador estadoIndicador = proc.getEstadoActual();
                 datos.estadoIndicador = estadoIndicador.toString();
 
-                // Determinar estado de máquina para texturas
                 if (estadoIndicador == EstadoIndicador.LISTO) {
                     datos.estadoMaquina = "LISTA";
                     datos.estadoIndicador = "LISTO";
@@ -439,7 +414,6 @@ public class LogicaServidor {
             }
         }
 
-        // Datos de mesa
         if (est instanceof Mesa) {
             Mesa mesa = (Mesa) est;
             datos.objetosEnEstacion = new ArrayList<>();
@@ -452,7 +426,6 @@ public class LogicaServidor {
             }
         }
 
-        // Datos de cafetera
         if (est instanceof Cafetera) {
             Cafetera cafetera = (Cafetera) est;
             datos.estadoMenuBebida = cafetera.getEstadoMenu() != null ?
@@ -460,7 +433,6 @@ public class LogicaServidor {
             datos.progresoPreparacion = cafetera.getProgreso();
         }
 
-        // Datos de fuente
         if (est instanceof Fuente) {
             Fuente fuente = (Fuente) est;
             datos.estadoMenuBebida = fuente.getEstadoMenu() != null ?
@@ -484,38 +456,32 @@ public class LogicaServidor {
 
 
     public void reiniciarParaNuevoNivel() {
-        // 👇 Obtener índice actual ANTES de avanzar
         int indiceLevelCompletado = gestorPartida.getNivelActualIndex();
         int puntajeNivel = gestorPuntaje.getPuntajeActual();
 
         System.out.println("🔄 Completando nivel " + indiceLevelCompletado + " con " + puntajeNivel + " puntos");
 
-        // Marcar nivel como completado y sumar puntaje
         if (indiceLevelCompletado < gestorPartida.getTodosLosNiveles().size()) {
             gestorPartida.getTodosLosNiveles().get(indiceLevelCompletado)
                 .marcarCompletado(puntajeNivel);
             gestorPartida.sumarPuntaje(puntajeNivel);
         }
 
-        // Avanzar al siguiente nivel
         gestorPartida.avanzarIndiceNivel();
 
         int nuevoIndice = gestorPartida.getNivelActualIndex();
         System.out.println("📍 Avanzando a nivel " + nuevoIndice);
 
-        // Verificar si hay siguiente nivel
         if (nuevoIndice >= gestorPartida.getTodosLosNiveles().size()) {
             System.out.println("⚠️ No hay más niveles disponibles");
             juegoTerminado = true;
             return;
         }
 
-        // Limpiar recursos del nivel anterior
         if (gestorMapa != null) {
             gestorMapa.dispose();
         }
 
-        // Obtener nuevo nivel actual
         nivelActual = gestorPartida.getNivelActual();
 
         if (nivelActual == null) {
@@ -526,19 +492,16 @@ public class LogicaServidor {
 
         System.out.println("✅ Inicializando nivel: " + nivelActual.getMapa().getNombre());
 
-        // Resetear estado del juego
         tiempoRestante = TIEMPO_OBJETIVO;
         juegoTerminado = false;
         despedido = false;
         razonDespido = "";
 
-        // Crear nuevo gestor de puntaje para el nuevo nivel
         gestorPuntaje = new GestorPuntaje();
 
         inputsJugadores.get(1).reset();
         inputsJugadores.get(2).reset();
 
-        // Re-inicializar todo para el nuevo nivel
         inicializarMapa();
         inicializarJugadores();
         inicializarSistemaPedidos();
@@ -556,10 +519,9 @@ public class LogicaServidor {
         System.out.println("📦 Generando paquete cambio nivel. Actual: " +
             gestorPartida.getNivelActualIndex() + ", Siguiente: " + siguienteIndice);
 
-        // Verificar si hay siguiente nivel
         if (siguienteIndice >= gestorPartida.getTodosLosNiveles().size()) {
             System.out.println("🏁 No hay más niveles - fin de partida");
-            return null; // No hay más niveles
+            return null;
         }
 
         NivelPartida siguienteNivel = gestorPartida.getTodosLosNiveles().get(siguienteIndice);
@@ -573,6 +535,6 @@ public class LogicaServidor {
     }
 
     public boolean estanJugadoresListos() {
-        return jugador1 != null && jugador2 != null && !juegoTerminado;
+        return jugador1 != null && jugador2 != null;
     }
 }

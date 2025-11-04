@@ -3,17 +3,21 @@ package com.hebergames.letmecook.red.paquetes;
 import com.hebergames.letmecook.red.PaqueteRed;
 
 public class PaqueteInput extends PaqueteRed {
-    private int idJugador;
-    private boolean arriba, abajo, izquierda, derecha, correr;
+    private final int ID_JUGADOR;
+    private final boolean ARRIBA;
+    private final boolean ABAJO;
+    private final boolean IZQUIERDA;
+    private final boolean DERECHA;
+    private final boolean CORRER;
 
-    public PaqueteInput(int idJugador, boolean arriba, boolean abajo,
-                        boolean izquierda, boolean derecha, boolean correr) {
-        this.idJugador = idJugador;
-        this.arriba = arriba;
-        this.abajo = abajo;
-        this.izquierda = izquierda;
-        this.derecha = derecha;
-        this.correr = correr;
+    public PaqueteInput(int ID_JUGADOR, boolean ARRIBA, boolean ABAJO,
+                        boolean IZQUIERDA, boolean DERECHA, boolean CORRER) {
+        this.ID_JUGADOR = ID_JUGADOR;
+        this.ARRIBA = ARRIBA;
+        this.ABAJO = ABAJO;
+        this.IZQUIERDA = IZQUIERDA;
+        this.DERECHA = DERECHA;
+        this.CORRER = CORRER;
     }
 
     @Override
@@ -21,27 +25,21 @@ public class PaqueteInput extends PaqueteRed {
         return TipoPaquete.INPUT_JUGADOR;
     }
 
-    public int getIdJugador() {
-        return idJugador;
-    }
+    public int getIdJugador() {return this.ID_JUGADOR;}
 
-    public boolean isArriba() {
-        return arriba;
-    }
+    public boolean isArriba() {return this.ARRIBA;}
 
-    public boolean isAbajo() {
-        return abajo;
-    }
+    public boolean isAbajo() {return this.ABAJO;}
 
     public boolean isIzquierda() {
-        return izquierda;
+        return this.IZQUIERDA;
     }
 
     public boolean isDerecha() {
-        return derecha;
+        return this.DERECHA;
     }
 
     public boolean isCorrer() {
-        return correr;
+        return this.CORRER;
     }
 }

@@ -53,7 +53,7 @@ public class Cliente {
     }
 
     public void dibujar(SpriteBatch batch) {
-        if (batch == null) return; // Servidor
+        if (batch == null) return;
         if (visualizador == null || estacionAsignada == null) {
             return;
         }
