@@ -165,10 +165,10 @@ public class ServidorJuego {
 
     private void manejarDesconexionVoluntaria(InetAddress direccion, int puerto, PaqueteDesconexion paquete) {
         String key = direccion.getHostAddress() + ":" + puerto;
-        InfoJugador jugador = jugadoresConectados.remove(key);
+        InfoJugador jugadorDesconectado = jugadoresConectados.get(key);
 
-        if (jugador != null) {
-            System.out.println("👋 Jugador " + jugador.id + " se desconectó voluntariamente");
+        if (jugadorDesconectado != null) {
+            System.out.println("👋 Jugador " + jugadorDesconectado.id + " se desconectó voluntariamente");
 
             // 🔥 Si hay un juego en curso, finalizarlo
             if (logicaJuego != null) {
@@ -177,29 +177,42 @@ public class ServidorJuego {
                 logicaJuego = null;
 
                 if (logicaTemporal != null) {
-                    logicaTemporal.finalizarPorDesconexion("Jugador " + jugador.id + " abandonó la partida");
+                    logicaTemporal.finalizarPorDesconexion("Jugador " + jugadorDesconectado.id + " abandonó la partida");
                 }
 
-                // Notificar al otro jugador
+                // 🎯 PRIMERO notificar al otro jugador MÚLTIPLES VECES
                 PaqueteDesconexion notificacion = new PaqueteDesconexion(0, "JUGADOR_ABANDONO");
                 for (InfoJugador otroJugador : jugadoresConectados.values()) {
-                    try {
-                        enviarPaquete(notificacion, otroJugador.direccion, otroJugador.puerto);
-                        Thread.sleep(50);
-                        enviarPaquete(notificacion, otroJugador.direccion, otroJugador.puerto);
-                    } catch (Exception e) {
-                        System.err.println("Error notificando desconexión: " + e.getMessage());
+                    if (otroJugador.id != jugadorDesconectado.id) {
+                        System.out.println("📤 Notificando a Jugador " + otroJugador.id + " sobre desconexión");
+                        try {
+                            // Enviar 5 veces con intervalos para garantizar recepción UDP
+                            for (int i = 0; i < 5; i++) {
+                                enviarPaquete(notificacion, otroJugador.direccion, otroJugador.puerto);
+                                Thread.sleep(100); // 100ms entre cada envío
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Error notificando desconexión: " + e.getMessage());
+                        }
                     }
                 }
 
+                // 🕐 Esperar más tiempo para que los paquetes lleguen
                 try {
-                    Thread.sleep(500);
+                    System.out.println("⏳ Esperando confirmación de recepción...");
+                    Thread.sleep(1000); // Aumentar a 1 segundo
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
-                // Reiniciar servidor
+                // 🔥 DESPUÉS remover al jugador desconectado
+                jugadoresConectados.remove(key);
+
+                // 🔄 FINALMENTE reiniciar servidor
                 reiniciarServidor();
+            } else {
+                // Si no hay juego en curso, simplemente remover
+                jugadoresConectados.remove(key);
             }
         }
     }

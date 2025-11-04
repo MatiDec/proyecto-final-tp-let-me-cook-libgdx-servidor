@@ -457,7 +457,7 @@ public class LogicaServidor {
             Cafetera cafetera = (Cafetera) est;
             datos.estadoMenuBebida = cafetera.getEstadoMenu() != null ?
                 cafetera.getEstadoMenu().toString() : "SELECCION_TAMANO";
-            // Agregar progreso si es necesario
+            datos.progresoPreparacion = cafetera.getProgreso();
         }
 
         // Datos de fuente
@@ -465,6 +465,7 @@ public class LogicaServidor {
             Fuente fuente = (Fuente) est;
             datos.estadoMenuBebida = fuente.getEstadoMenu() != null ?
                 fuente.getEstadoMenu().toString() : "SELECCION_TAMANO";
+            datos.progresoPreparacion = fuente.getProgreso();
         }
 
         return datos;
