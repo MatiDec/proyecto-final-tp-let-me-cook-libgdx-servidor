@@ -64,7 +64,7 @@ public class LogicaServidor {
         if (gestorPartida.getNivelActual() == null) {
             ArrayList<String> rutasMapas = new ArrayList<>();
             for (int i = 1; i <= CANTIDAD_MAPAS; i++) {
-                rutasMapas.add("core/src/main/java/com/hebergames/letmecook/recursos/mapas/Sucursal_" + i + ".tmx");
+                rutasMapas.add("mapas/Sucursal_" + i + ".tmx");
             }
             gestorPartida.generarNuevaPartida(rutasMapas, rutasMapas.size(), true);
         }
